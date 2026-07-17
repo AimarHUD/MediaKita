@@ -2,6 +2,7 @@ const API = "./api";
 const DAY_NAMES = ["", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
 // ---------------------------------------------------------------------------
+<<<<<<< HEAD
 // Local seed fallback (mirrors database/seed.sql)
 // Used when the REST API is unavailable so the UI still shows real
 // database-derived content.
@@ -67,6 +68,8 @@ function seedSchedules(doctorId) {
 }
 
 // ---------------------------------------------------------------------------
+=======
+>>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
 // State & helpers
 // ---------------------------------------------------------------------------
 let state = {
@@ -288,6 +291,7 @@ async function loadDoctors() {
       btn.addEventListener("click", () => openBookingModal(JSON.parse(btn.dataset.book)))
     );
   } catch (err) {
+<<<<<<< HEAD
     // Fallback: tampilkan data seed (database/seed.sql) bila API tak tersedia
     const fallback = seedDoctors({ search, specialization, city });
     if (fallback.length > 0) {
@@ -298,12 +302,15 @@ async function loadDoctors() {
       );
       return;
     }
+=======
+>>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
     container.innerHTML = `<div class="empty-state">${escapeHtml(err.message)}</div>`;
   }
 }
 
 function doctorCard(d) {
   const clinics = d.clinics || [];
+<<<<<<< HEAD
   const name = escapeHtml(d.full_name);
   const spec = escapeHtml(d.specialization);
   return `
@@ -318,11 +325,23 @@ function doctorCard(d) {
         <div class="doc-info">
           <h3 class="doc-name">${name}</h3>
           <span class="doc-specialization">${spec}</span>
+=======
+  return `
+    <div class="card">
+      <div class="card-top">
+        <div>
+          <p class="card-title">${escapeHtml(d.full_name)}</p>
+          <p class="card-sub">${escapeHtml(d.specialization)}</p>
+>>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
         </div>
         <span class="mono-pill">${clinics.length} klinik</span>
       </div>
       <div class="chip-row">
+<<<<<<< HEAD
         ${clinics.map((c) => `<span class="chip">${escapeHtml(c.name)} Â· ${escapeHtml(c.city)}</span>`).join("")}
+=======
+        ${clinics.map((c) => `<span class="chip">${escapeHtml(c.name)} · ${escapeHtml(c.city)}</span>`).join("")}
+>>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
       </div>
       <div class="card-actions">
         <button class="btn primary small" data-book-doctor
@@ -367,6 +386,7 @@ async function openBookingModal(doctor) {
       .join("");
     updateBookingDateHint();
   } catch (err) {
+<<<<<<< HEAD
     // Fallback: jadwal dari seed bila API tak tersedia
     currentSchedules = seedSchedules(doctor.id);
     if (currentSchedules.length > 0) {
@@ -379,6 +399,8 @@ async function openBookingModal(doctor) {
       updateBookingDateHint();
       return;
     }
+=======
+>>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
     select.innerHTML = `<option value="">${escapeHtml(err.message)}</option>`;
   }
 }

@@ -242,6 +242,7 @@ main{ max-width: 1180px; margin: 0 auto; padding: 0 2rem 5rem; position: relativ
 .stock-note{ font-size: 0.78rem; color: var(--ink-soft); }
 .card-actions{ margin-top: 0.4rem; }
 
+<<<<<<< HEAD
 .doctor-card{ gap: 0.85rem; }
 .doc-header{
   display: flex;
@@ -281,6 +282,8 @@ main{ max-width: 1180px; margin: 0 auto; padding: 0 2rem 5rem; position: relativ
   margin-top: 0.35rem;
 }
 
+=======
+>>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
 .empty-state{
   grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--ink-soft);
   border: 1px dashed var(--line-strong); border-radius: var(--radius);
