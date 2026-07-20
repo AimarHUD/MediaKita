@@ -1,187 +1,388 @@
--- ============================================================================
--- MediKita — Database Schema (PostgreSQL)
--- Workshop: Database Design — Crow's Foot ERD implementation
---
--- Design notes / assumptions (see docs/ASUMSI.md for full list):
---   * Money columns use NUMERIC(12,2), never FLOAT (avoids rounding errors).
---   * Every relationship is enforced with a real FOREIGN KEY.
---   * Many-to-many relationships (dokter<->klinik) use a junction table.
---   * Stock & price are per-pharmacy (apotek), not global to the medicine —
---     modeled as a junction table `pharmacy_stock` with its own attributes.
---   * transaction_items freezes price_at_purchase so historical transactions
---     stay accurate even if the pharmacy later changes its price.
--- ============================================================================
-
-DROP TABLE IF EXISTS transaction_items CASCADE;
-DROP TABLE IF EXISTS transactions CASCADE;
-DROP TABLE IF EXISTS pharmacy_stock CASCADE;
-DROP TABLE IF EXISTS medicines CASCADE;
-DROP TABLE IF EXISTS medicine_categories CASCADE;
-DROP TABLE IF EXISTS pharmacies CASCADE;
-DROP TABLE IF EXISTS bookings CASCADE;
-DROP TABLE IF EXISTS doctor_schedules CASCADE;
-DROP TABLE IF EXISTS doctor_clinics CASCADE;
-DROP TABLE IF EXISTS doctors CASCADE;
-DROP TABLE IF EXISTS clinics CASCADE;
-DROP TABLE IF EXISTS patients CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-
--- ----------------------------------------------------------------------------
--- 1. USER MANAGEMENT
--- ----------------------------------------------------------------------------
-
 CREATE TABLE users (
-    id              BIGSERIAL PRIMARY KEY,
-    email           VARCHAR(255) NOT NULL UNIQUE,
-    password_hash   VARCHAR(255) NOT NULL,
-    role            VARCHAR(20)  NOT NULL DEFAULT 'patient'
-                        CHECK (role IN ('patient', 'admin')),
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('patient','admin','doctor') NOT NULL DEFAULT 'patient',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB; 
 
--- 1:1 extension of `users` — kept separate so `users` stays a lean auth
--- table and patient-only fields don't pollute admin accounts.
+
 CREATE TABLE patients (
-    id              BIGSERIAL PRIMARY KEY,
-    user_id         BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-    full_name       VARCHAR(150) NOT NULL,
-    date_of_birth   DATE,
-    phone           VARCHAR(30),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    full_name VARCHAR(150) NOT NULL,
+    date_of_birth DATE,
+    gender ENUM('Laki-laki','Perempuan'),
+    phone VARCHAR(20),
+    email VARCHAR(255),
+    address TEXT,
+    blood_type ENUM('A','B','AB','O'),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
--- ----------------------------------------------------------------------------
--- 2. KLINIK & DOKTER
--- ----------------------------------------------------------------------------
+    FOREIGN KEY (user_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+CREATE TABLE specializations (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    specialization_name VARCHAR(100) NOT NULL,
+    description TEXT
+) ENGINE=InnoDB; 
+
+
+CREATE TABLE cities (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    city_name VARCHAR(100) NOT NULL,
+    province VARCHAR(100) NOT NULL,
+    postal_code VARCHAR(10)
+) ENGINE=InnoDB; 
+
 
 CREATE TABLE clinics (
-    id          BIGSERIAL PRIMARY KEY,
-    name        VARCHAR(150) NOT NULL,
-    city        VARCHAR(100) NOT NULL,
-    address     VARCHAR(255),
-    phone       VARCHAR(30),
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    city_id BIGINT NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    address TEXT NOT NULL,
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    opening_hours VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (city_id)
+    REFERENCES cities(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
 
 CREATE TABLE doctors (
-    id              BIGSERIAL PRIMARY KEY,
-    full_name       VARCHAR(150) NOT NULL,
-    specialization  VARCHAR(100) NOT NULL,
-    email           VARCHAR(255) UNIQUE,
-    phone           VARCHAR(30),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNIQUE,
+    specialization_id BIGINT NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    gender ENUM('Laki-laki','Perempuan'),
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    experience INT,
+    photo VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
--- Junction table: "Satu dokter bisa praktik di lebih dari satu klinik" (M:N)
+    FOREIGN KEY (user_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (specialization_id)
+    REFERENCES specializations(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+
 CREATE TABLE doctor_clinics (
-    doctor_id   BIGINT NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
-    clinic_id   BIGINT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
-    PRIMARY KEY (doctor_id, clinic_id)
-);
+    doctor_id BIGINT NOT NULL,
+    clinic_id BIGINT NOT NULL,
 
--- ----------------------------------------------------------------------------
--- 3. JADWAL & BOOKING
--- ----------------------------------------------------------------------------
+    PRIMARY KEY (doctor_id, clinic_id),
 
--- A recurring weekly practice slot for a doctor at a specific clinic.
+    FOREIGN KEY (doctor_id)
+    REFERENCES doctors(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (clinic_id)
+    REFERENCES clinics(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+
 CREATE TABLE doctor_schedules (
-    id          BIGSERIAL PRIMARY KEY,
-    doctor_id   BIGINT NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
-    clinic_id   BIGINT NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
-    day_of_week SMALLINT NOT NULL CHECK (day_of_week BETWEEN 1 AND 7), -- 1=Senin .. 7=Minggu
-    start_time  TIME NOT NULL,
-    end_time    TIME NOT NULL,
-    CONSTRAINT chk_schedule_time CHECK (end_time > start_time),
-    -- doctor must actually practice at that clinic (defense in depth,
-    -- enforced at application layer against doctor_clinics too)
-    CONSTRAINT uq_doctor_schedule UNIQUE (doctor_id, clinic_id, day_of_week, start_time)
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    doctor_id BIGINT NOT NULL,
+    clinic_id BIGINT NOT NULL,
+
+    day_of_week ENUM(
+        'Senin',
+        'Selasa',
+        'Rabu',
+        'Kamis',
+        'Jumat',
+        'Sabtu',
+        'Minggu'
+    ) NOT NULL,
+
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    max_patient INT DEFAULT 20,
+
+    FOREIGN KEY (doctor_id)
+    REFERENCES doctors(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (clinic_id)
+    REFERENCES clinics(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
 
 CREATE TABLE bookings (
-    id              BIGSERIAL PRIMARY KEY,
-    patient_id      BIGINT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    schedule_id     BIGINT NOT NULL REFERENCES doctor_schedules(id) ON DELETE RESTRICT,
-    booking_date    DATE NOT NULL,          -- the concrete calendar date chosen for that weekly slot
-    status          VARCHAR(20) NOT NULL DEFAULT 'menunggu'
-                        CHECK (status IN ('menunggu', 'selesai', 'dibatalkan')),
-    notes           VARCHAR(255),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    -- a patient cannot double-book the exact same slot on the same date
-    CONSTRAINT uq_booking_slot UNIQUE (schedule_id, booking_date, patient_id)
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id BIGINT NOT NULL,
+    schedule_id BIGINT NOT NULL,
+    booking_date DATE NOT NULL,
+    queue_number INT,
+    status ENUM(
+        'Menunggu',
+        'Dikonfirmasi',
+        'Selesai',
+        'Dibatalkan'
+    ) DEFAULT 'Menunggu',
 
--- ----------------------------------------------------------------------------
--- 4. KATALOG OBAT
--- ----------------------------------------------------------------------------
+    complaint TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (patient_id)
+    REFERENCES patients(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (schedule_id)
+    REFERENCES doctor_schedules(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+
+CREATE TABLE medical_records (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id BIGINT NOT NULL,
+    doctor_id BIGINT NOT NULL,
+    booking_id BIGINT NOT NULL,
+    diagnosis TEXT NOT NULL,
+    prescription TEXT,
+    notes TEXT,
+    visit_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (patient_id)
+    REFERENCES patients(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (doctor_id)
+    REFERENCES doctors(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (booking_id)
+    REFERENCES bookings(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+
+CREATE TABLE prescriptions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    medical_record_id BIGINT NOT NULL,
+    medicine_id BIGINT NOT NULL,
+    dosage VARCHAR(100),
+    quantity INT NOT NULL,
+    instruction TEXT,
+
+    FOREIGN KEY (medical_record_id)
+    REFERENCES medical_records(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (medicine_id)
+    REFERENCES medicines(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
 
 CREATE TABLE medicine_categories (
-    id      BIGSERIAL PRIMARY KEY,
-    name    VARCHAR(100) NOT NULL UNIQUE
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(100) NOT NULL,
+    description TEXT
+) ENGINE=InnoDB; 
+
 
 CREATE TABLE medicines (
-    id              BIGSERIAL PRIMARY KEY,
-    sku             VARCHAR(40) NOT NULL UNIQUE,
-    name            VARCHAR(150) NOT NULL,
-    description     TEXT,
-    category_id     BIGINT REFERENCES medicine_categories(id) ON DELETE SET NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    category_id BIGINT NOT NULL,
+    sku VARCHAR(50) NOT NULL UNIQUE,
+    medicine_name VARCHAR(150) NOT NULL,
+    description TEXT,
+    manufacturer VARCHAR(100),
+    expiry_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
--- ----------------------------------------------------------------------------
--- 5. STOK & HARGA (per apotek)
--- ----------------------------------------------------------------------------
+    FOREIGN KEY (category_id)
+    REFERENCES medicine_categories(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
 
-CREATE TABLE pharmacies (
-    id          BIGSERIAL PRIMARY KEY,
-    name        VARCHAR(150) NOT NULL,
-    city        VARCHAR(100) NOT NULL,
-    address     VARCHAR(255),
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
 
--- Junction table with attributes: stock & price are defined PER apotek,
--- never on the medicine itself.
-CREATE TABLE pharmacy_stock (
-    pharmacy_id BIGINT NOT NULL REFERENCES pharmacies(id) ON DELETE CASCADE,
-    medicine_id BIGINT NOT NULL REFERENCES medicines(id) ON DELETE CASCADE,
-    stock_qty   INTEGER NOT NULL DEFAULT 0 CHECK (stock_qty >= 0),
-    price       NUMERIC(12, 2) NOT NULL CHECK (price >= 0),  -- NOT FLOAT — exact money math
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (pharmacy_id, medicine_id)
-);
+ CREATE TABLE pharmacies (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    city_id BIGINT NOT NULL,
+    pharmacy_name VARCHAR(150) NOT NULL,
+    address TEXT NOT NULL,
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    opening_hours VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
--- ----------------------------------------------------------------------------
--- 6. TRANSAKSI
--- ----------------------------------------------------------------------------
+    FOREIGN KEY (city_id)
+    REFERENCES cities(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
 
-CREATE TABLE transactions (
-    id              BIGSERIAL PRIMARY KEY,
-    patient_id      BIGINT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    pharmacy_id     BIGINT NOT NULL REFERENCES pharmacies(id) ON DELETE RESTRICT,
-    total_price     NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (total_price >= 0),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
 
-CREATE TABLE transaction_items (
-    id                  BIGSERIAL PRIMARY KEY,
-    transaction_id      BIGINT NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
-    medicine_id         BIGINT NOT NULL REFERENCES medicines(id) ON DELETE RESTRICT,
-    sku_at_purchase     VARCHAR(40) NOT NULL,
-    price_at_purchase   NUMERIC(12, 2) NOT NULL CHECK (price_at_purchase >= 0),
-    quantity            INTEGER NOT NULL CHECK (quantity > 0),
-    subtotal            NUMERIC(12, 2) GENERATED ALWAYS AS (price_at_purchase * quantity) STORED
-);
+ CREATE TABLE pharmacy_stock (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    pharmacy_id BIGINT NOT NULL,
+    medicine_id BIGINT NOT NULL,
+    stock_qty INT NOT NULL DEFAULT 0,
+    price DECIMAL(12,2) NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
--- ----------------------------------------------------------------------------
--- INDEXES for the required search/filter features
--- ----------------------------------------------------------------------------
+    FOREIGN KEY (pharmacy_id)
+    REFERENCES pharmacies(id)
+    ON DELETE CASCADE,
 
-CREATE INDEX idx_doctors_name            ON doctors (full_name);
-CREATE INDEX idx_doctors_specialization  ON doctors (specialization);
-CREATE INDEX idx_clinics_city            ON clinics (city);
-CREATE INDEX idx_medicines_name          ON medicines (name);
-CREATE INDEX idx_medicines_category      ON medicines (category_id);
-CREATE INDEX idx_pharmacy_stock_price    ON pharmacy_stock (price);
-CREATE INDEX idx_bookings_patient        ON bookings (patient_id);
-CREATE INDEX idx_transactions_patient    ON transactions (patient_id);
+    FOREIGN KEY (medicine_id)
+    REFERENCES medicines(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+
+ CREATE TABLE transactions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id BIGINT NOT NULL,
+    pharmacy_id BIGINT NOT NULL,
+    transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    total_price DECIMAL(12,2) NOT NULL,
+    payment_status ENUM(
+        'Pending',
+        'Paid',
+        'Cancelled'
+    ) DEFAULT 'Pending',
+
+    FOREIGN KEY (patient_id)
+    REFERENCES patients(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (pharmacy_id)
+    REFERENCES pharmacies(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+
+ CREATE TABLE transaction_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id BIGINT NOT NULL,
+    medicine_id BIGINT NOT NULL,
+    quantity INT NOT NULL,
+    price DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(12,2) NOT NULL,
+
+    FOREIGN KEY (transaction_id)
+    REFERENCES transactions(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (medicine_id)
+    REFERENCES medicines(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+ CREATE TABLE payments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id BIGINT NOT NULL,
+    payment_method ENUM(
+        'Transfer',
+        'QRIS',
+        'E-Wallet',
+        'Cash'
+    ) NOT NULL,
+
+    payment_status ENUM(
+        'Pending',
+        'Paid',
+        'Failed'
+    ) DEFAULT 'Pending',
+
+    payment_date DATETIME,
+
+    FOREIGN KEY (transaction_id)
+    REFERENCES transactions(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+ CREATE TABLE reviews (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id BIGINT NOT NULL,
+    doctor_id BIGINT NOT NULL,
+    rating INT NOT NULL,
+    review TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (patient_id)
+    REFERENCES patients(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (doctor_id)
+    REFERENCES doctors(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+ CREATE TABLE notifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+ CREATE TABLE addresses (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id BIGINT NOT NULL,
+    city_id BIGINT NOT NULL,
+    address TEXT NOT NULL,
+    postal_code VARCHAR(10),
+
+    FOREIGN KEY (patient_id)
+    REFERENCES patients(id)
+    ON DELETE CASCADE,
+
+    FOREIGN KEY (city_id)
+    REFERENCES cities(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+ CREATE TABLE login_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    login_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    logout_time DATETIME,
+    ip_address VARCHAR(50),
+    device VARCHAR(100),
+
+    FOREIGN KEY (user_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+
+ CREATE TABLE appointments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    booking_id BIGINT NOT NULL,
+    queue_number INT NOT NULL,
+    check_in_time DATETIME,
+    status ENUM(
+        'Waiting',
+        'Called',
+        'Completed',
+        'Cancelled'
+    ) DEFAULT 'Waiting',
+
+    FOREIGN KEY (booking_id)
+    REFERENCES bookings(id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB; 
+

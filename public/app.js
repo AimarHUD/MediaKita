@@ -2,74 +2,6 @@ const API = "./api";
 const DAY_NAMES = ["", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
 // ---------------------------------------------------------------------------
-<<<<<<< HEAD
-// Local seed fallback (mirrors database/seed.sql)
-// Used when the REST API is unavailable so the UI still shows real
-// database-derived content.
-// ---------------------------------------------------------------------------
-const SEED_CLINICS = [
-  { id: 1, name: "Klinik Sehat Sentosa", city: "Jakarta Selatan" },
-  { id: 2, name: "Klinik Medika Utama", city: "Bandung" },
-  { id: 3, name: "Klinik Keluarga Bahagia", city: "Surabaya" },
-  { id: 4, name: "Klinik Sehat Sentosa Cabang BSD", city: "Tangerang Selatan" },
-];
-
-const SEED_DOCTORS = [
-  { id: 1, full_name: "dr. Ayu Lestari, Sp.PD", specialization: "Penyakit Dalam", clinic_ids: [1, 4] },
-  { id: 2, full_name: "dr. Rangga Pratama, Sp.A", specialization: "Anak", clinic_ids: [1, 2] },
-  { id: 3, full_name: "dr. Maria Christin, Sp.KK", specialization: "Kulit & Kelamin", clinic_ids: [2] },
-  { id: 4, full_name: "dr. Fajar Nugroho", specialization: "Dokter Umum", clinic_ids: [1, 3, 4] },
-  { id: 5, full_name: "dr. Intan Permatasari, Sp.THT", specialization: "THT", clinic_ids: [3] },
-];
-
-const SEED_SCHEDULES = [
-  { id: 1, doctor_id: 1, clinic_id: 1, day_of_week: 1, start_time: "09:00", end_time: "13:00" },
-  { id: 2, doctor_id: 1, clinic_id: 4, day_of_week: 3, start_time: "14:00", end_time: "18:00" },
-  { id: 3, doctor_id: 2, clinic_id: 1, day_of_week: 2, start_time: "10:00", end_time: "14:00" },
-  { id: 4, doctor_id: 2, clinic_id: 2, day_of_week: 5, start_time: "09:00", end_time: "12:00" },
-  { id: 5, doctor_id: 3, clinic_id: 2, day_of_week: 4, start_time: "13:00", end_time: "17:00" },
-  { id: 6, doctor_id: 4, clinic_id: 1, day_of_week: 1, start_time: "08:00", end_time: "12:00" },
-  { id: 7, doctor_id: 4, clinic_id: 3, day_of_week: 2, start_time: "08:00", end_time: "12:00" },
-  { id: 8, doctor_id: 4, clinic_id: 4, day_of_week: 6, start_time: "09:00", end_time: "13:00" },
-  { id: 9, doctor_id: 5, clinic_id: 3, day_of_week: 5, start_time: "10:00", end_time: "15:00" },
-];
-
-function seedDoctors({ search = "", specialization = "", city = "" } = {}) {
-  return SEED_DOCTORS.filter((d) => {
-    const matchName = !search || d.full_name.toLowerCase().includes(search.toLowerCase());
-    const matchSpec = !specialization || d.specialization.toLowerCase().includes(specialization.toLowerCase());
-    const matchCity =
-      !city ||
-      d.clinic_ids.some((cid) => SEED_CLINICS.find((c) => c.id === cid)?.city.toLowerCase().includes(city.toLowerCase()));
-    return matchName && matchSpec && matchCity;
-  }).map((d) => ({
-    id: d.id,
-    full_name: d.full_name,
-    specialization: d.specialization,
-    clinics: d.clinic_ids
-      .map((cid) => SEED_CLINICS.find((c) => c.id === cid))
-      .map((c) => ({ id: c.id, name: c.name, city: c.city })),
-  }));
-}
-
-function seedSchedules(doctorId) {
-  return SEED_SCHEDULES.filter((s) => s.doctor_id === Number(doctorId)).map((s) => {
-    const clinic = SEED_CLINICS.find((c) => c.id === s.clinic_id);
-    return {
-      id: s.id,
-      day_of_week: s.day_of_week,
-      start_time: s.start_time,
-      end_time: s.end_time,
-      clinic_id: s.clinic_id,
-      clinic_name: clinic.name,
-      clinic_city: clinic.city,
-    };
-  });
-}
-
-// ---------------------------------------------------------------------------
-=======
->>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
 // State & helpers
 // ---------------------------------------------------------------------------
 let state = {
@@ -291,7 +223,6 @@ async function loadDoctors() {
       btn.addEventListener("click", () => openBookingModal(JSON.parse(btn.dataset.book)))
     );
   } catch (err) {
-<<<<<<< HEAD
     // Fallback: tampilkan data seed (database/seed.sql) bila API tak tersedia
     const fallback = seedDoctors({ search, specialization, city });
     if (fallback.length > 0) {
@@ -302,15 +233,12 @@ async function loadDoctors() {
       );
       return;
     }
-=======
->>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
     container.innerHTML = `<div class="empty-state">${escapeHtml(err.message)}</div>`;
   }
 }
 
 function doctorCard(d) {
   const clinics = d.clinics || [];
-<<<<<<< HEAD
   const name = escapeHtml(d.full_name);
   const spec = escapeHtml(d.specialization);
   return `
@@ -325,23 +253,11 @@ function doctorCard(d) {
         <div class="doc-info">
           <h3 class="doc-name">${name}</h3>
           <span class="doc-specialization">${spec}</span>
-=======
-  return `
-    <div class="card">
-      <div class="card-top">
-        <div>
-          <p class="card-title">${escapeHtml(d.full_name)}</p>
-          <p class="card-sub">${escapeHtml(d.specialization)}</p>
->>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
         </div>
         <span class="mono-pill">${clinics.length} klinik</span>
       </div>
       <div class="chip-row">
-<<<<<<< HEAD
         ${clinics.map((c) => `<span class="chip">${escapeHtml(c.name)} Â· ${escapeHtml(c.city)}</span>`).join("")}
-=======
-        ${clinics.map((c) => `<span class="chip">${escapeHtml(c.name)} · ${escapeHtml(c.city)}</span>`).join("")}
->>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
       </div>
       <div class="card-actions">
         <button class="btn primary small" data-book-doctor
@@ -386,7 +302,6 @@ async function openBookingModal(doctor) {
       .join("");
     updateBookingDateHint();
   } catch (err) {
-<<<<<<< HEAD
     // Fallback: jadwal dari seed bila API tak tersedia
     currentSchedules = seedSchedules(doctor.id);
     if (currentSchedules.length > 0) {
@@ -399,8 +314,6 @@ async function openBookingModal(doctor) {
       updateBookingDateHint();
       return;
     }
-=======
->>>>>>> f6c92f1718e33ab8d34e10cc67004b4f3d17bd1b
     select.innerHTML = `<option value="">${escapeHtml(err.message)}</option>`;
   }
 }

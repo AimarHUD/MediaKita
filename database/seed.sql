@@ -1,94 +1,277 @@
--- ============================================================================
--- MediKita — Seed data
--- Password for every seeded account is: "password123"
--- (bcrypt hash below is generated once at seed time by scripts/seed.js;
---  this .sql file is kept for reference / manual psql runs and uses a
---  pre-computed bcrypt hash of "password123")
--- ============================================================================
+-- ==========================================
+-- USERS
+-- ==========================================
 
 INSERT INTO users (email, password_hash, role) VALUES
-('siti.amelia@example.com', '$2b$10$CwTycUXWue0Thq9StjUM0uJ8kZfPqrE0lz1XwYb9x2Rw8OZmvE3S6', 'patient'),
-('budi.santoso@example.com', '$2b$10$CwTycUXWue0Thq9StjUM0uJ8kZfPqrE0lz1XwYb9x2Rw8OZmvE3S6', 'patient'),
-('admin@medikita.id',        '$2b$10$CwTycUXWue0Thq9StjUM0uJ8kZfPqrE0lz1XwYb9x2Rw8OZmvE3S6', 'admin');
+('bilqis@gmail.com', '123456', 'patient'),
+('admin@medikita.com', 'admin123', 'admin'),
+('dr.andi@gmail.com', 'dokter123', 'doctor'),
+('dr.sinta@gmail.com', 'dokter456', 'doctor'),
+('rizky@gmail.com', 'rizky123', 'patient');
 
-INSERT INTO patients (user_id, full_name, date_of_birth, phone) VALUES
-(1, 'Siti Amelia', '1996-04-12', '081234567890'),
-(2, 'Budi Santoso', '1990-11-02', '081298765432');
+-- ==========================================
+-- PATIENTS
+-- ==========================================
 
-INSERT INTO clinics (name, city, address, phone) VALUES
-('Klinik Sehat Sentosa', 'Jakarta Selatan', 'Jl. Fatmawati No. 12', '0217654321'),
-('Klinik Medika Utama', 'Bandung', 'Jl. Dago No. 45', '0224567890'),
-('Klinik Keluarga Bahagia', 'Surabaya', 'Jl. Darmo No. 88', '0315678123'),
-('Klinik Sehat Sentosa Cabang BSD', 'Tangerang Selatan', 'Jl. BSD Raya No. 3', '0217001122');
+INSERT INTO patients
+(user_id, full_name, date_of_birth, gender, phone, email, address, blood_type)
+VALUES
+(1,'Bilqis Syifa','2006-12-02','Perempuan','08123456789','bilqis@gmail.com','Jakarta Selatan','O'),
+(5,'Rizky Pratama','2000-05-10','Laki-laki','081298765432','rizky@gmail.com','Bogor','A');
 
-INSERT INTO doctors (full_name, specialization, email, phone) VALUES
-('dr. Ayu Lestari, Sp.PD', 'Penyakit Dalam', 'ayu.lestari@medikita.id', '081111000001'),
-('dr. Rangga Pratama, Sp.A', 'Anak', 'rangga.pratama@medikita.id', '081111000002'),
-('dr. Maria Christin, Sp.KK', 'Kulit & Kelamin', 'maria.christin@medikita.id', '081111000003'),
-('dr. Fajar Nugroho', 'Dokter Umum', 'fajar.nugroho@medikita.id', '081111000004'),
-('dr. Intan Permatasari, Sp.THT', 'THT', 'intan.permatasari@medikita.id', '081111000005');
+-- ==========================================
+-- SPECIALIZATIONS
+-- ==========================================
 
--- Many-to-many: dokter yang praktik di lebih dari satu klinik
-INSERT INTO doctor_clinics (doctor_id, clinic_id) VALUES
-(1, 1), (1, 4),
-(2, 1), (2, 2),
-(3, 2),
-(4, 1), (4, 3), (4, 4),
-(5, 3);
+INSERT INTO specializations
+(specialization_name, description)
+VALUES
+('Dokter Umum','Melayani pemeriksaan kesehatan umum'),
+('Dokter Anak','Menangani kesehatan anak'),
+('Dokter Gigi','Menangani kesehatan gigi dan mulut'),
+('Dokter Jantung','Menangani penyakit jantung'),
+('Dokter Kulit','Menangani penyakit kulit');
 
-INSERT INTO doctor_schedules (doctor_id, clinic_id, day_of_week, start_time, end_time) VALUES
-(1, 1, 1, '09:00', '13:00'),
-(1, 4, 3, '14:00', '18:00'),
-(2, 1, 2, '10:00', '14:00'),
-(2, 2, 5, '09:00', '12:00'),
-(3, 2, 4, '13:00', '17:00'),
-(4, 1, 1, '08:00', '12:00'),
-(4, 3, 2, '08:00', '12:00'),
-(4, 4, 6, '09:00', '13:00'),
-(5, 3, 5, '10:00', '15:00');
+-- ==========================================
+-- CITIES
+-- ==========================================
 
-INSERT INTO bookings (patient_id, schedule_id, booking_date, status, notes) VALUES
-(1, 1, '2026-07-13', 'menunggu', 'Kontrol rutin gula darah'),
-(2, 4, '2026-07-14', 'selesai', 'Imunisasi anak'),
-(1, 6, '2026-07-20', 'dibatalkan', NULL);
+INSERT INTO cities
+(city_name, province, postal_code)
+VALUES
+('Jakarta Selatan','DKI Jakarta','12520'),
+('Jakarta Timur','DKI Jakarta','13410'),
+('Bogor','Jawa Barat','16111'),
+('Depok','Jawa Barat','16411'),
+('Bekasi','Jawa Barat','17121');
 
-INSERT INTO medicine_categories (name) VALUES
-('Obat Bebas'), ('Obat Bebas Terbatas'), ('Vitamin & Suplemen'), ('Obat Resep'), ('Alat Kesehatan');
+==========================================
+-- CLINICS
+-- ==========================================
 
-INSERT INTO medicines (sku, name, description, category_id) VALUES
-('MED-0001', 'Paracetamol 500mg (10 tablet)', 'Meredakan demam dan nyeri ringan.', 1),
-('MED-0002', 'Vitamin C 1000mg (30 tablet)', 'Suplemen daya tahan tubuh.', 3),
-('MED-0003', 'Antasida Sirup 150ml', 'Meredakan gejala maag dan asam lambung.', 1),
-('MED-0004', 'Amoxicillin 500mg (10 kapsul)', 'Antibiotik, wajib resep dokter.', 4),
-('MED-0005', 'CTM 4mg (10 tablet)', 'Meredakan alergi dan gatal-gatal.', 2),
-('MED-0006', 'Masker Medis (50 pcs)', 'Masker sekali pakai 3-ply.', 5),
-('MED-0007', 'Minyak Kayu Putih 60ml', 'Menghangatkan tubuh, meredakan perut kembung.', 1);
+INSERT INTO clinics
+(city_id, name, address, phone, email, opening_hours)
+VALUES
+(1,'Klinik Sehat Jakarta','Jl. Raya Pasar Minggu No.10','021888888','jakarta@medikita.com','08:00-20:00'),
+(2,'Klinik Medika Timur','Jl. Pemuda No.25','021777777','timur@medikita.com','08:00-21:00'),
+(3,'Klinik Bogor Sehat','Jl. Pajajaran No.15','0251838383','bogor@medikita.com','07:00-20:00'),
+(4,'Klinik Depok Care','Jl. Margonda No.45','021565656','depok@medikita.com','08:00-22:00'),
+(5,'Klinik Bekasi Medis','Jl. Ahmad Yani No.8','021989898','bekasi@medikita.com','08:00-20:00');
 
-INSERT INTO pharmacies (name, city, address) VALUES
-('Apotek MediKita Fatmawati', 'Jakarta Selatan', 'Jl. Fatmawati No. 12A'),
-('Apotek MediKita Dago', 'Bandung', 'Jl. Dago No. 47'),
-('Apotek MediKita Darmo', 'Surabaya', 'Jl. Darmo No. 90');
+-- ==========================================
+-- DOCTORS
+-- ==========================================
 
-INSERT INTO pharmacy_stock (pharmacy_id, medicine_id, stock_qty, price) VALUES
-(1, 1, 120, 12000.00),
-(1, 2, 80,  45000.00),
-(1, 3, 40,  28000.00),
-(1, 4, 15,  35000.00),
-(1, 6, 200, 25000.00),
-(2, 1, 60,  12500.00),
-(2, 2, 50,  47000.00),
-(2, 5, 90,  9000.00),
-(2, 7, 70,  15000.00),
-(3, 1, 30,  11800.00),
-(3, 3, 25,  27500.00),
-(3, 6, 150, 24000.00),
-(3, 7, 45,  14500.00);
+INSERT INTO doctors
+(user_id, specialization_id, full_name, gender, email, phone, experience, photo)
+VALUES
+(3,1,'dr. Andi Saputra','Laki-laki','drandi@gmail.com','081212121212',8,'andi.jpg'),
+(4,2,'dr. Sinta Maharani','Perempuan','drsinta@gmail.com','081313131313',5,'sinta.jpg');
 
-INSERT INTO transactions (patient_id, pharmacy_id, total_price) VALUES
-(1, 1, 57000.00),
-(2, 2, 18000.00);
+-- ==========================================
+-- DOCTOR_CLINICS
+-- ==========================================
 
-INSERT INTO transaction_items (transaction_id, medicine_id, sku_at_purchase, price_at_purchase, quantity) VALUES
-(1, 1, 'MED-0001', 12000.00, 1),
-(1, 2, 'MED-0002', 45000.00, 1),
-(2, 5, 'MED-0005', 9000.00, 2);
+INSERT INTO doctor_clinics
+(doctor_id, clinic_id)
+VALUES
+(1,1),
+(1,3),
+(2,2),
+(2,4);
+
+-- ==========================================
+-- DOCTOR_SCHEDULES
+-- ==========================================
+
+INSERT INTO doctor_schedules
+(doctor_id, clinic_id, day_of_week, start_time, end_time, max_patient)
+VALUES
+(1,1,'Senin','08:00:00','12:00:00',20),
+(1,3,'Rabu','09:00:00','13:00:00',15),
+(2,2,'Selasa','10:00:00','14:00:00',20),
+(2,4,'Jumat','08:00:00','12:00:00',25);
+
+-- ==========================================
+-- BOOKINGS
+-- ==========================================
+
+INSERT INTO bookings
+(patient_id, schedule_id, booking_date, queue_number, status, complaint)
+VALUES
+(1,1,'2026-07-20',1,'Menunggu','Demam tinggi'),
+(2,2,'2026-07-22',2,'Dikonfirmasi','Batuk dan pilek'),
+(1,3,'2026-07-24',1,'Selesai','Kontrol kesehatan'),
+(2,4,'2026-07-25',3,'Menunggu','Sakit gigi');
+
+-- ====================================…
+-- MEDICAL_RECORDS
+-- ==========================================
+
+INSERT INTO medical_records
+(patient_id, doctor_id, booking_id, diagnosis, prescription, notes, visit_date)
+VALUES
+(1,1,1,'Demam','Paracetamol 3x1','Perbanyak istirahat','2026-07-20'),
+(2,2,2,'Flu','Vitamin C 2x1','Minum air hangat','2026-07-22'),
+(1,2,3,'Kontrol Rutin','Vitamin B Complex','Kondisi membaik','2026-07-24');
+
+[14:36, 20/07/2026] Daffa (Sistem informasi BSI): -- ==========================================
+-- MEDICINE_CATEGORIES
+-- ==========================================
+
+INSERT INTO medicine_categories
+(category_name, description)
+VALUES
+('Antibiotik','Obat untuk infeksi bakteri'),
+('Vitamin','Suplemen kesehatan'),
+('Analgesik','Obat pereda nyeri'),
+('Obat Demam','Obat penurun panas'),
+('Obat Batuk','Obat untuk batuk');
+
+-- ==========================================
+-- MEDICINES
+-- ==========================================
+
+INSERT INTO medicines
+(category_id, sku, medicine_name, description, manufacturer, expiry_date)
+VALUES
+(4,'OB001','Paracetamol','Obat penurun demam','Kimia Farma','2028-12-31'),
+(2,'OB002','Vitamin C','Suplemen Vitamin C','Kalbe Farma','2028-08-10'),
+(3,'OB003','Ibuprofen','Pereda nyeri','Sanbe Farma','2029-02-20'),
+(5,'OB004','OBH Combi','Obat Batuk','Combiphar','2028-10-15'),
+(1,'OB005','Amoxicillin','Antibiotik','Dexa Medica','2028-06-01');
+
+-- ==========================================
+-- MEDICINE_IMAGES
+-- ==========================================
+
+INSERT INTO medicine_images
+(medicine_id, image)
+VALUES
+(1,'paracetamol.jpg'),
+(2,'vitaminc.jpg'),
+(3,'ibuprofen.jpg'),
+(4,'obh.jpg'),
+(5,'amoxicillin.jpg');
+
+-- ==========================================
+-- PHARMACIES
+-- ==========================================
+
+INSERT INTO pharmacies
+(city_id, pharmacy_name, address, phone, email, opening_hours)
+VALUES
+(1,'Apotek Kimia Farma','Jl. Pasar Minggu No.20','021111111','kimiafarma@gmail.com','08:00-22:00'),
+(2,'Apotek K24','Jl. Pemuda No.18','021222222','k24@gmail.com','24 Jam'),
+(3,'Apotek Guardian','Jl. Pajajaran No.9','025133333','guardian@gmail.com','08:00-21:00');
+
+-- ==========================================
+-- PHARMACY_STOCK
+-- ==========================================
+
+INSERT INTO pharmacy_stock
+(pharmacy_id, medicine_id, stock_qty, price)
+VALUES
+(1,1,100,12000),
+(1,2,80,18000),
+(1,3,50,25000),
+(2,1,120,12500),
+(2,4,75,17000),
+(3,5,60,22000);
+[14:36, 20/07/2026] Daffa (Sistem informasi BSI): -- ==========================================
+-- PRESCRIPTIONS
+-- ==========================================
+
+INSERT INTO prescriptions
+(medical_record_id, medicine_id, dosage, quantity, instruction)
+VALUES
+(1,1,'3x1 sehari',10,'Diminum setelah makan'),
+(2,2,'2x1 sehari',14,'Diminum pagi dan malam'),
+(3,3,'2x1 sehari',8,'Diminum setelah makan');
+
+-- ==========================================
+-- TRANSACTIONS
+-- ==========================================
+
+INSERT INTO transactions
+(patient_id, pharmacy_id, transaction_date, total_price, payment_status)
+VALUES
+(1,1,'2026-07-20 10:30:00',120000,'Paid'),
+(2,2,'2026-07-22 13:45:00',85000,'Paid'),
+(1,3,'2026-07-24 09:20:00',44000,'Pending');
+
+-- ==========================================
+-- TRANSACTION_ITEMS
+-- ==========================================
+
+INSERT INTO transaction_items
+(transaction_id, medicine_id, quantity, price, subtotal)
+VALUES
+(1,1,5,12000,60000),
+(1,2,2,30000,60000),
+(2,4,5,17000,85000),
+(3,5,2,22000,44000);
+
+-- ==========================================
+-- PAYMENTS
+-- ==========================================
+
+INSERT INTO payments
+(transaction_id, payment_method, payment_status, payment_date)
+VALUES
+(1,'QRIS','Paid','2026-07-20 10:35:00'),
+(2,'Transfer','Paid','2026-07-22 13:50:00'),
+(3,'E-Wallet','Pending',NULL);
+
+-- ==========================================
+-- REVIEWS
+-- ==========================================
+
+INSERT INTO reviews
+(patient_id, doctor_id, rating, review)
+VALUES
+(1,1,5,'Dokternya ramah dan penjelasannya mudah dipahami.'),
+(2,2,4,'Pelayanan cepat dan memuaskan.');
+
+-- ==========================================
+-- NOTIFICATIONS
+-- ==========================================
+
+INSERT INTO notifications
+(user_id, title, message, is_read)
+VALUES
+(1,'Booking Berhasil','Booking konsultasi Anda berhasil dibuat.',1),
+(1,'Pembayaran Berhasil','Pembayaran obat telah diterima.',1),
+(5,'Jadwal Konsultasi','Jangan lupa jadwal konsultasi besok.',0);
+
+-- ==========================================
+-- ADDRESSES
+-- ==========================================
+
+INSERT INTO addresses
+(patient_id, city_id, address, postal_code)
+VALUES
+(1,1,'Jl. Raya Pasar Minggu No.10','12520'),
+(2,3,'Jl. Pajajaran No.25','16111');
+
+-- ==========================================
+-- LOGIN_HISTORY
+-- ==========================================
+
+INSERT INTO login_history
+(user_id, login_time, logout_time, ip_address, device)
+VALUES
+(1,'2026-07-20 08:00:00','2026-07-20 08:45:00','192.168.1.10','Android'),
+(2,'2026-07-20 09:00:00','2026-07-20 17:00:00','192.168.1.20','Windows'),
+(3,'2026-07-20 10:00:00','2026-07-20 12:00:00','192.168.1.30','Laptop');
+
+-- ==========================================
+-- APPOINTMENTS
+-- ==========================================
+
+INSERT INTO appointments
+(booking_id, queue_number, check_in_time, status)
+VALUES
+(1,1,'2026-07-20 07:45:00','Completed'),
+(2,2,'2026-07-22 13:20:00','Completed'),
+(4,3,NULL,'Waiting');
