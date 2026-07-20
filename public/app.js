@@ -1,24 +1,19 @@
-const API = "./api";
+const API = "api";
 const DAY_NAMES = ["", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
 // ---------------------------------------------------------------------------
 // State & helpers
 // ---------------------------------------------------------------------------
 let state = {
-  token: localStorage.getItem("medikita_token") || null,
-  user: JSON.parse(localStorage.getItem("medikita_user") || "null"),
+  user: null,
 };
 
-function authHeaders() {
-  return state.token ? { Authorization: `Bearer ${state.token}` } : {};
-}
-
 async function api(path, options = {}) {
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(`${API}/${path}`, {
+    credentials: "same-origin",
     ...options,
     headers: {
       "Content-Type": "application/json",
-      ...authHeaders(),
       ...(options.headers || {}),
     },
   });
@@ -58,24 +53,18 @@ function escapeHtml(str) {
 // ---------------------------------------------------------------------------
 // Auth state / UI
 // ---------------------------------------------------------------------------
-function persistAuth(token, user) {
-  state.token = token;
+function persistUser(user) {
   state.user = user;
-  localStorage.setItem("medikita_token", token);
-  localStorage.setItem("medikita_user", JSON.stringify(user));
   applyAuthUI();
 }
 
-function clearAuth() {
-  state.token = null;
+function clearUser() {
   state.user = null;
-  localStorage.removeItem("medikita_token");
-  localStorage.removeItem("medikita_user");
   applyAuthUI();
 }
 
 function applyAuthUI() {
-  const loggedIn = !!state.token;
+  const loggedIn = !!state.user;
   const isAdmin = state.user?.role === "admin";
 
   document.querySelectorAll(".auth-only").forEach((el) => (el.hidden = !loggedIn));
@@ -145,14 +134,14 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   const errorEl = document.getElementById("loginError");
   errorEl.textContent = "";
   try {
-    const { token, user } = await api("/auth/login", {
+    const { user } = await api("auth.php?action=login", {
       method: "POST",
       body: JSON.stringify({
         email: document.getElementById("loginEmail").value.trim(),
         password: document.getElementById("loginPassword").value,
       }),
     });
-    persistAuth(token, user);
+    persistUser(user);
     authModal.hidden = true;
     toast(`Selamat datang kembali, ${user.fullName}!`);
   } catch (err) {
@@ -165,7 +154,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
   const errorEl = document.getElementById("registerError");
   errorEl.textContent = "";
   try {
-    const { token, user } = await api("/auth/register", {
+    const { user } = await api("auth.php?action=register", {
       method: "POST",
       body: JSON.stringify({
         fullName: document.getElementById("regName").value.trim(),
@@ -175,7 +164,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
         password: document.getElementById("regPassword").value,
       }),
     });
-    persistAuth(token, user);
+    persistUser(user);
     authModal.hidden = true;
     toast(`Akun dibuat. Selamat datang, ${user.fullName}!`);
   } catch (err) {
@@ -183,14 +172,15 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
   }
 });
 
-document.getElementById("btnLogout").addEventListener("click", () => {
-  clearAuth();
+document.getElementById("btnLogout").addEventListener("click", async () => {
+  try { await api("auth.php?action=logout", { method: "POST" }); } catch (_) {}
+  clearUser();
   toast("Kamu sudah keluar.");
   switchTab("beranda");
 });
 
 function requireLogin() {
-  if (!state.token) {
+  if (!state.user) {
     authModal.hidden = false;
     toast("Masuk dulu untuk melanjutkan.", true);
     return false;
@@ -212,7 +202,7 @@ async function loadDoctors() {
   const container = document.getElementById("doctorResults");
   container.innerHTML = `<div class="empty-state">Memuat dokter…</div>`;
   try {
-    const doctors = await api(`/doctors?${params}`);
+    const doctors = await api(`doctors.php?${params}`);
     doctorsLoaded = true;
     if (doctors.length === 0) {
       container.innerHTML = `<div class="empty-state">Tidak ada dokter yang cocok. Coba kata kunci lain.</div>`;
@@ -289,7 +279,7 @@ async function openBookingModal(doctor) {
   bookingModal.hidden = false;
 
   try {
-    currentSchedules = await api(`/doctors/${doctor.id}/schedules`);
+    currentSchedules = await api(`doctors.php?id=${doctor.id}&schedules=1`);
     if (currentSchedules.length === 0) {
       select.innerHTML = `<option value="">Belum ada jadwal tersedia</option>`;
       return;
@@ -297,7 +287,7 @@ async function openBookingModal(doctor) {
     select.innerHTML = currentSchedules
       .map(
         (s) =>
-          `<option value="${s.id}">${DAY_NAMES[s.day_of_week]}, ${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)} · ${escapeHtml(s.clinic_name)} (${escapeHtml(s.clinic_city)})</option>`
+          `<option value="${s.id}">${DAY_NAMES[s.day_of_week]}, ${String(s.start_time).slice(0, 5)}–${String(s.end_time).slice(0, 5)} · ${escapeHtml(s.clinic_name)} (${escapeHtml(s.clinic_city)})</option>`
       )
       .join("");
     updateBookingDateHint();
@@ -347,7 +337,7 @@ document.getElementById("bookingForm").addEventListener("submit", async (e) => {
   }
 
   try {
-    await api("/bookings", {
+    await api("bookings.php", {
       method: "POST",
       body: JSON.stringify({ scheduleId, bookingDate, notes }),
     });
@@ -367,7 +357,7 @@ let medicinesLoaded = false;
 
 async function loadCategories(targetId = "medCategory") {
   try {
-    const categories = await api("/medicines/categories");
+    const categories = await api("medicines.php?action=categories");
     const select = document.getElementById(targetId);
     const placeholder = select.querySelector("option");
     select.innerHTML = "";
@@ -394,7 +384,7 @@ async function loadMedicines() {
   const container = document.getElementById("medicineResults");
   container.innerHTML = `<div class="empty-state">Memuat katalog obat…</div>`;
   try {
-    const meds = await api(`/medicines?${params}`);
+    const meds = await api(`medicines.php?${params}`);
     medicinesLoaded = true;
     if (meds.length === 0) {
       container.innerHTML = `<div class="empty-state">Tidak ada obat yang cocok dengan filter ini.</div>`;
@@ -458,7 +448,7 @@ async function openCartModal(med) {
   cartModal.hidden = false;
 
   try {
-    const stock = await api(`/medicines/${med.id}/stock`);
+    const stock = await api(`medicines.php?id=${med.id}&action=stock`);
     if (stock.length === 0) {
       list.innerHTML = `<div class="empty-state">Stok sedang habis di semua apotek.</div>`;
       return;
@@ -501,7 +491,7 @@ document.getElementById("cartForm").addEventListener("submit", async (e) => {
   const qty = Number(document.getElementById("cartQty").value);
 
   try {
-    const result = await api("/transactions", {
+    const result = await api("transactions.php", {
       method: "POST",
       body: JSON.stringify({
         pharmacyId: selectedPharmacyStock.pharmacy_id,
@@ -522,11 +512,11 @@ document.getElementById("cartForm").addEventListener("submit", async (e) => {
 // Riwayat
 // ---------------------------------------------------------------------------
 async function loadBookings() {
-  if (!state.token) return;
+  if (!state.user) return;
   const container = document.getElementById("bookingList");
   container.innerHTML = `<div class="empty-state">Memuat riwayat booking…</div>`;
   try {
-    const bookings = await api("/bookings/me");
+    const bookings = await api("bookings.php?action=me");
     if (bookings.length === 0) {
       container.innerHTML = `<div class="empty-state">Belum ada booking. Cari dokter untuk mulai.</div>`;
       return;
@@ -546,7 +536,7 @@ function bookingItem(b) {
       <div class="list-item-top">
         <div>
           <p class="list-item-title">${escapeHtml(b.doctor_name)} <span class="card-sub">· ${escapeHtml(b.specialization)}</span></p>
-          <p class="list-item-meta">${escapeHtml(b.clinic_name)}, ${escapeHtml(b.clinic_city)} · ${formatDate(b.booking_date)} · ${b.start_time.slice(0,5)}–${b.end_time.slice(0,5)}</p>
+          <p class="list-item-meta">${escapeHtml(b.clinic_name)}, ${escapeHtml(b.clinic_city)} · ${formatDate(b.booking_date)} · ${String(b.start_time).slice(0,5)}–${String(b.end_time).slice(0,5)}</p>
           ${b.notes ? `<p class="list-item-meta">Catatan: ${escapeHtml(b.notes)}</p>` : ""}
         </div>
         <div style="display:flex; align-items:center; gap:0.6rem;">
@@ -559,7 +549,7 @@ function bookingItem(b) {
 
 async function cancelBooking(id) {
   try {
-    await api(`/bookings/${id}/cancel`, { method: "PATCH" });
+    await api(`bookings.php?id=${id}&action=cancel`, { method: "PATCH" });
     toast("Booking dibatalkan.");
     loadBookings();
   } catch (err) {
@@ -568,11 +558,11 @@ async function cancelBooking(id) {
 }
 
 async function loadTransactions() {
-  if (!state.token) return;
+  if (!state.user) return;
   const container = document.getElementById("txList");
   container.innerHTML = `<div class="empty-state">Memuat riwayat transaksi…</div>`;
   try {
-    const txs = await api("/transactions/me");
+    const txs = await api("transactions.php?action=me");
     if (txs.length === 0) {
       container.innerHTML = `<div class="empty-state">Belum ada transaksi. Beli obat di tab Apotek.</div>`;
       return;
@@ -608,7 +598,7 @@ async function loadAdminMedicines() {
   const container = document.getElementById("adminMedicineList");
   container.innerHTML = `<div class="empty-state">Memuat…</div>`;
   try {
-    const meds = await api("/medicines");
+    const meds = await api("medicines.php");
     if (meds.length === 0) {
       container.innerHTML = `<div class="empty-state">Belum ada obat. Tambahkan lewat form di atas.</div>`;
       return;
@@ -623,12 +613,14 @@ async function loadAdminMedicines() {
 }
 
 function adminMedicineItem(m) {
+  const category = m.category ?? (m.category_id ? null : null);
+  const catLabel = m.category || "Tanpa kategori";
   return `
     <div class="list-item">
       <div class="list-item-top">
         <div>
           <p class="list-item-title">${escapeHtml(m.name)} <span class="mono-pill">${escapeHtml(m.sku)}</span></p>
-          <p class="list-item-meta">${escapeHtml(m.category || "Tanpa kategori")} · ${m.description ? escapeHtml(m.description) : "tanpa deskripsi"}</p>
+          <p class="list-item-meta">${escapeHtml(catLabel)} · ${m.description ? escapeHtml(m.description) : "tanpa deskripsi"}</p>
         </div>
         <button class="btn danger small" data-delete-med="${m.id}">Hapus</button>
       </div>
@@ -638,7 +630,7 @@ function adminMedicineItem(m) {
 async function deleteMedicine(id) {
   if (!confirm("Hapus obat ini dari katalog?")) return;
   try {
-    await api(`/medicines/${id}`, { method: "DELETE" });
+    await api(`medicines.php?id=${id}`, { method: "DELETE" });
     toast("Obat dihapus.");
     loadAdminMedicines();
   } catch (err) {
@@ -651,7 +643,7 @@ document.getElementById("addMedicineForm").addEventListener("submit", async (e) 
   const categorySelect = document.getElementById("newCategory");
   const categoryId = categorySelect.selectedOptions[0]?.dataset.id || null;
   try {
-    await api("/medicines", {
+    await api("medicines.php", {
       method: "POST",
       body: JSON.stringify({
         sku: document.getElementById("newSku").value.trim(),
@@ -671,5 +663,11 @@ document.getElementById("addMedicineForm").addEventListener("submit", async (e) 
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
-applyAuthUI();
-switchTab("beranda");
+(async function boot() {
+  try {
+    const { user } = await api("auth.php?action=me");
+    if (user) persistUser(user);
+  } catch (_) {}
+  applyAuthUI();
+  switchTab("beranda");
+})();
