@@ -3,11 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MediKita — Akses kesehatan, dijadwalkan rapi</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="public/styles.css" />
+<title>Eterna Care — Akses kesehatan, dijadwalkan rapi</title>
+<link rel="stylesheet" href="public/styles.css?v=3" />
 </head>
 <body>
 
@@ -21,7 +18,7 @@
         <path d="M16 10 V22 M10 16 H22" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
       </svg>
     </span>
-    <span class="brand-name">MediKita</span>
+    <span class="brand-name">Eterna Care</span>
   </div>
 
   <nav class="tabs" id="mainTabs">
@@ -42,64 +39,20 @@
 
 <main id="app">
 
-  <!-- ============ BERANDA ============ -->
   <section class="tab-panel" id="panel-beranda">
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow">Klinik &amp; apotek partner di seluruh Indonesia</p>
         <h1 class="display">Booking dokter.<br>Tebus obat.<br><em>Satu label, satu riwayat.</em></h1>
-        <p class="lede">MediKita menyatukan jadwal klinik partner dan stok apotek partner ke satu tempat—supaya kamu tahu persis kapan bisa ketemu dokter, dan di apotek mana obatmu tersedia dengan harga terbaik.</p>
+        <p class="lede">Eterna Care menyatukan jadwal klinik partner dan stok apotek partner ke satu tempat—supaya kamu tahu persis kapan bisa ketemu dokter, dan di apotek mana obatmu tersedia dengan harga terbaik.</p>
         <div class="hero-cta">
           <button class="btn primary" data-goto="dokter">Cari dokter sekarang</button>
           <button class="btn outline" data-goto="apotek">Cek stok obat</button>
         </div>
       </div>
-      <div class="hero-panel" aria-hidden="true">
-        <div class="label-card">
-          <div class="label-row"><span class="label-eyebrow">Rp / SKU</span><span class="label-eyebrow">MED-0001</span></div>
-          <div class="label-title">Paracetamol 500mg</div>
-          <div class="label-meta">10 tablet · Obat Bebas</div>
-          <div class="label-divider"></div>
-          <div class="label-row"><span>Termurah</span><strong>Rp 11.800</strong></div>
-          <div class="label-row"><span>Tersedia di</span><strong>3 apotek</strong></div>
-        </div>
-        <div class="label-card offset">
-          <div class="label-row"><span class="label-eyebrow">Jadwal</span><span class="label-eyebrow">Senin</span></div>
-          <div class="label-title">dr. Fajar Nugroho</div>
-          <div class="label-meta">Dokter Umum · Klinik Sehat Sentosa</div>
-          <div class="label-divider"></div>
-          <div class="label-row"><span>08.00 – 12.00</span><strong class="status pending">menunggu</strong></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="stat-strip">
-      <div class="stat"><span class="stat-n">4</span><span class="stat-l">Klinik partner</span></div>
-      <div class="stat"><span class="stat-n">5</span><span class="stat-l">Dokter aktif</span></div>
-      <div class="stat"><span class="stat-n">3</span><span class="stat-l">Apotek partner</span></div>
-      <div class="stat"><span class="stat-n">7</span><span class="stat-l">Produk obat</span></div>
-    </section>
-
-    <section class="how">
-      <h2 class="display sm">Cara kerja MediKita</h2>
-      <div class="how-grid">
-        <div class="how-card">
-          <span class="how-mark">Cari &amp; pilih</span>
-          <p>Telusuri dokter berdasarkan nama, spesialisasi, atau kota—lihat semua klinik tempat mereka praktik.</p>
-        </div>
-        <div class="how-card">
-          <span class="how-mark">Booking slot</span>
-          <p>Pilih jadwal praktik dan tanggal kunjungan. Status booking-mu tercatat: menunggu, selesai, atau dibatalkan.</p>
-        </div>
-        <div class="how-card">
-          <span class="how-mark">Tebus di apotek</span>
-          <p>Bandingkan stok dan harga obat antar apotek partner, lalu selesaikan transaksi dan simpan riwayatnya.</p>
-        </div>
-      </div>
     </section>
   </section>
 
-  <!-- ============ CARI DOKTER ============ -->
   <section class="tab-panel" id="panel-dokter" hidden>
     <div class="panel-head">
       <h2 class="display sm">Cari dokter</h2>
@@ -114,49 +67,51 @@
     <div class="grid cards" id="doctorResults"></div>
   </section>
 
-  <!-- ============ APOTEK / OBAT ============ -->
   <section class="tab-panel" id="panel-apotek" hidden>
     <div class="panel-head">
-      <h2 class="display sm">Katalog obat</h2>
-      <p class="panel-sub">Cari &amp; filter obat lintas apotek partner — harga termurah ditampilkan otomatis.</p>
+      <h2 class="display sm">Apotek &amp; obat</h2>
+      <p class="panel-sub">Cari obat lintas apotek, atau jelajahi katalog apotek partner.</p>
     </div>
-    <div class="filter-bar">
-      <input type="search" id="medSearch" placeholder="Nama obat…" />
-      <select id="medCategory"><option value="">Semua kategori</option></select>
-      <input type="number" id="medMinPrice" placeholder="Harga min" min="0" />
-      <input type="number" id="medMaxPrice" placeholder="Harga max" min="0" />
-      <button class="btn primary" id="btnSearchMeds">Cari</button>
+
+    <div class="subtabs">
+      <button class="subtab-btn active" data-apotek-sub="katalog">Katalog Obat</button>
+      <button class="subtab-btn" data-apotek-sub="apotek-list">Daftar Apotek</button>
     </div>
-    <div class="grid cards" id="medicineResults"></div>
+
+    <div class="sub-panel" id="sub-katalog">
+      <div class="filter-bar">
+        <input type="search" id="medSearch" placeholder="Nama obat…" />
+        <select id="medCategory"><option value="">Semua kategori</option></select>
+        <input type="number" id="medMinPrice" placeholder="Harga min" min="0" />
+        <input type="number" id="medMaxPrice" placeholder="Harga max" min="0" />
+        <button class="btn primary" id="btnSearchMeds">Cari</button>
+      </div>
+      <div class="grid cards" id="medicineResults"></div>
+    </div>
+
+    <div class="sub-panel" id="sub-apotek-list" hidden>
+      <div class="filter-bar">
+        <input type="search" id="pharmSearch" placeholder="Nama apotek…" />
+        <input type="text" id="pharmCity" placeholder="Kota…" />
+        <button class="btn primary" id="btnSearchPharmacies">Cari</button>
+      </div>
+      <div class="grid cards" id="pharmacyResults"></div>
+    </div>
   </section>
 
-  <!-- ============ RIWAYAT ============ -->
   <section class="tab-panel" id="panel-riwayat" hidden>
     <div class="panel-head">
       <h2 class="display sm">Riwayat saya</h2>
       <p class="panel-sub">Semua booking konsultasi dan transaksi pembelian obatmu.</p>
     </div>
-
-    <div class="subtabs">
-      <button class="subtab-btn active" data-sub="bookinglist">Booking</button>
-      <button class="subtab-btn" data-sub="txlist">Transaksi</button>
-    </div>
-
-    <div class="sub-panel" id="sub-bookinglist">
-      <div class="list" id="bookingList"></div>
-    </div>
-    <div class="sub-panel" id="sub-txlist" hidden>
-      <div class="list" id="txList"></div>
-    </div>
+    <div class="list" id="bookingList"></div>
   </section>
 
-  <!-- ============ ADMIN ============ -->
   <section class="tab-panel" id="panel-admin" hidden>
     <div class="panel-head">
       <h2 class="display sm">Kelola katalog obat</h2>
       <p class="panel-sub">Tambah, ubah, atau hapus produk obat, serta atur stok &amp; harga per apotek.</p>
     </div>
-
     <form class="admin-form" id="addMedicineForm">
       <input type="text" id="newSku" placeholder="SKU (mis. MED-0008)" required />
       <input type="text" id="newName" placeholder="Nama obat" required />
@@ -164,13 +119,11 @@
       <input type="text" id="newDesc" placeholder="Deskripsi singkat" />
       <button class="btn primary" type="submit">+ Tambah obat</button>
     </form>
-
     <div class="list" id="adminMedicineList"></div>
   </section>
 
 </main>
 
-<!-- ============ AUTH MODAL ============ -->
 <div class="modal-backdrop" id="authModal" hidden>
   <div class="modal">
     <button class="modal-close" id="closeAuth" aria-label="Tutup">×</button>
@@ -178,7 +131,6 @@
       <button class="modal-tab active" data-modal-tab="login">Masuk</button>
       <button class="modal-tab" data-modal-tab="register">Daftar</button>
     </div>
-
     <form id="loginForm" class="modal-form">
       <label>Email<input type="email" id="loginEmail" required /></label>
       <label>Password<input type="password" id="loginPassword" required /></label>
@@ -186,7 +138,6 @@
       <p class="form-error" id="loginError"></p>
       <button class="btn primary full" type="submit">Masuk</button>
     </form>
-
     <form id="registerForm" class="modal-form" hidden>
       <label>Nama lengkap<input type="text" id="regName" required /></label>
       <label>Email<input type="email" id="regEmail" required /></label>
@@ -199,29 +150,40 @@
   </div>
 </div>
 
-<!-- ============ BOOKING MODAL ============ -->
 <div class="modal-backdrop" id="bookingModal" hidden>
   <div class="modal">
     <button class="modal-close" id="closeBooking" aria-label="Tutup">×</button>
     <h3 class="display sm" id="bookingDoctorName"></h3>
     <p class="panel-sub" id="bookingDoctorMeta"></p>
     <form class="modal-form" id="bookingForm">
-      <label>Pilih jadwal
-        <select id="bookingScheduleSelect" required></select>
-      </label>
-      <label>Tanggal kunjungan
-        <input type="date" id="bookingDate" required />
-      </label>
-      <label>Catatan (opsional)
-        <input type="text" id="bookingNotes" placeholder="Keluhan singkat…" />
-      </label>
+      <label>Pilih jadwal<select id="bookingScheduleSelect" required></select></label>
+      <label>Tanggal kunjungan<input type="date" id="bookingDate" required /></label>
+      <label>Catatan (opsional)<input type="text" id="bookingNotes" placeholder="Keluhan singkat…" /></label>
       <p class="form-error" id="bookingError"></p>
       <button class="btn primary full" type="submit">Konfirmasi booking</button>
     </form>
   </div>
 </div>
 
-<!-- ============ CART / PURCHASE MODAL ============ -->
+<div class="modal-backdrop" id="medStockModal" hidden>
+  <div class="modal">
+    <button class="modal-close" id="closeMedStock" aria-label="Tutup">×</button>
+    <h3 class="display sm" id="medStockMedName"></h3>
+    <p class="panel-sub" id="medStockMedMeta"></p>
+    <div class="list" id="medStockList"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="pharmacyCatalogModal" hidden>
+  <div class="modal">
+    <button class="modal-close" id="closePharmacyCatalog" aria-label="Tutup">×</button>
+    <img id="catalogPharmacyImage" class="pharm-img" src="" alt="" hidden loading="lazy" />
+    <h3 class="display sm" id="catalogPharmacyName"></h3>
+    <p class="panel-sub" id="catalogPharmacyMeta"></p>
+    <div class="list" id="catalogMedicineList"></div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="cartModal" hidden>
   <div class="modal">
     <button class="modal-close" id="closeCart" aria-label="Tutup">×</button>
@@ -230,9 +192,7 @@
     <div class="list" id="cartPharmacyList"></div>
     <form class="modal-form" id="cartForm" hidden>
       <label>Apotek terpilih<span id="cartSelectedPharmacy" class="mono-pill"></span></label>
-      <label>Jumlah
-        <input type="number" id="cartQty" min="1" value="1" required />
-      </label>
+      <label>Jumlah<input type="number" id="cartQty" min="1" value="1" required /></label>
       <p class="form-error" id="cartError"></p>
       <button class="btn primary full" type="submit">Beli sekarang</button>
     </form>
@@ -241,6 +201,6 @@
 
 <div class="toast" id="toast" hidden></div>
 
-<script src="public/app.js"></script>
+<script src="public/app.js?v=9"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 -- ============================================================================
--- MediKita — Database Schema (MySQL / MariaDB)
+-- Eterna Care — Database Schema (MySQL / MariaDB)
 -- Converted from database/schema.sql (PostgreSQL) for XAMPP (PHP + MySQL).
 -- Money columns use DECIMAL(12,2), never FLOAT.
 -- ============================================================================
@@ -103,6 +103,32 @@ CREATE TABLE bookings (
     CONSTRAINT fk_bookings_schedule FOREIGN KEY (schedule_id) REFERENCES doctor_schedules(id) ON DELETE RESTRICT
 );
 
+CREATE TABLE medical_records (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    patient_id      BIGINT NOT NULL,
+    doctor_id       BIGINT NOT NULL,
+    booking_id      BIGINT NOT NULL UNIQUE,
+    diagnosis       TEXT NOT NULL,
+    prescription    TEXT,
+    notes           TEXT,
+    visit_date      DATE,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_mr_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+    CONSTRAINT fk_mr_doctor  FOREIGN KEY (doctor_id)  REFERENCES doctors(id)  ON DELETE CASCADE,
+    CONSTRAINT fk_mr_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+);
+
+CREATE TABLE prescriptions (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    medical_record_id   BIGINT NOT NULL,
+    medicine_id         BIGINT NOT NULL,
+    dosage              VARCHAR(100),
+    quantity            INT NOT NULL,
+    instruction         TEXT,
+    CONSTRAINT fk_pr_medical FOREIGN KEY (medical_record_id) REFERENCES medical_records(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pr_medicine FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE RESTRICT
+);
+
 -- ----------------------------------------------------------------------------
 -- 4. KATALOG OBAT
 -- ----------------------------------------------------------------------------
@@ -197,7 +223,7 @@ CREATE INDEX idx_transactions_patient    ON transactions (patient_id);
 INSERT INTO users (email, password_hash, role) VALUES
 ('siti.amelia@example.com', '$2y$10$e4Bkkhh4ABhvczawGvhWSOeFR5wbSY0UTyQueg.lReShjETCX9Kuy', 'patient'),
 ('budi.santoso@example.com', '$2y$10$e4Bkkhh4ABhvczawGvhWSOeFR5wbSY0UTyQueg.lReShjETCX9Kuy', 'patient'),
-('admin@medikita.id',        '$2y$10$e4Bkkhh4ABhvczawGvhWSOeFR5wbSY0UTyQueg.lReShjETCX9Kuy', 'admin');
+('admin@eternacare.id',        '$2y$10$e4Bkkhh4ABhvczawGvhWSOeFR5wbSY0UTyQueg.lReShjETCX9Kuy', 'admin');
 
 INSERT INTO patients (user_id, full_name, date_of_birth, phone) VALUES
 (1, 'Siti Amelia', '1996-04-12', '081234567890'),
@@ -210,11 +236,11 @@ INSERT INTO clinics (name, city, address, phone) VALUES
 ('Klinik Sehat Sentosa Cabang BSD', 'Tangerang Selatan', 'Jl. BSD Raya No. 3', '0217001122');
 
 INSERT INTO doctors (full_name, specialization, email, phone) VALUES
-('dr. Ayu Lestari, Sp.PD', 'Penyakit Dalam', 'ayu.lestari@medikita.id', '081111000001'),
-('dr. Rangga Pratama, Sp.A', 'Anak', 'rangga.pratama@medikita.id', '081111000002'),
-('dr. Maria Christin, Sp.KK', 'Kulit & Kelamin', 'maria.christin@medikita.id', '081111000003'),
-('dr. Fajar Nugroho', 'Dokter Umum', 'fajar.nugroho@medikita.id', '081111000004'),
-('dr. Intan Permatasari, Sp.THT', 'THT', 'intan.permatasari@medikita.id', '081111000005');
+('dr. Ayu Lestari, Sp.PD', 'Penyakit Dalam', 'ayu.lestari@eternacare.id', '081111000001'),
+('dr. Rangga Pratama, Sp.A', 'Anak', 'rangga.pratama@eternacare.id', '081111000002'),
+('dr. Maria Christin, Sp.KK', 'Kulit & Kelamin', 'maria.christin@eternacare.id', '081111000003'),
+('dr. Fajar Nugroho', 'Dokter Umum', 'fajar.nugroho@eternacare.id', '081111000004'),
+('dr. Intan Permatasari, Sp.THT', 'THT', 'intan.permatasari@eternacare.id', '081111000005');
 
 INSERT INTO doctor_clinics (doctor_id, clinic_id) VALUES
 (1, 1), (1, 4),
@@ -239,6 +265,18 @@ INSERT INTO bookings (patient_id, schedule_id, booking_date, status, notes) VALU
 (2, 4, '2026-07-14', 'selesai', 'Imunisasi anak'),
 (1, 6, '2026-07-20', 'dibatalkan', NULL);
 
+INSERT INTO medical_records (patient_id, doctor_id, booking_id, diagnosis, prescription, notes) VALUES
+(1, 1, 1, 'Diabetes mellitus tipe 2', 'Paracetamol 500mg dan Vitamin C 1000mg', 'Kontrol rutin gula darah'),
+(2, 2, 2, 'ISPA', 'Amoxicillin 500mg dan CTM 4mg', 'Imunisasi anak'),
+(1, 4, 3, 'Gastritis', 'Antasida Sirup 150ml', '-');
+
+INSERT INTO prescriptions (medical_record_id, medicine_id, dosage, quantity, instruction) VALUES
+(1, 1, '500mg', 10, 'Minum 3x1 tablet setelah makan'),
+(1, 2, '1000mg', 30, 'Minum 1x1 tablet setiap pagi'),
+(2, 4, '500mg', 10, 'Minum 3x1 kapsul sebelum makan'),
+(2, 5, '4mg', 10, 'Minum 3x1 tablet setelah makan'),
+(3, 3, '150ml', 1, 'Minum 3x1 sendok makan sebelum makan');
+
 INSERT INTO medicine_categories (name) VALUES
 ('Obat Bebas'), ('Obat Bebas Terbatas'), ('Vitamin & Suplemen'), ('Obat Resep'), ('Alat Kesehatan');
 
@@ -252,9 +290,9 @@ INSERT INTO medicines (sku, name, description, category_id) VALUES
 ('MED-0007', 'Minyak Kayu Putih 60ml', 'Menghangatkan tubuh, meredakan perut kembung.', 1);
 
 INSERT INTO pharmacies (name, city, address) VALUES
-('Apotek MediKita Fatmawati', 'Jakarta Selatan', 'Jl. Fatmawati No. 12A'),
-('Apotek MediKita Dago', 'Bandung', 'Jl. Dago No. 47'),
-('Apotek MediKita Darmo', 'Surabaya', 'Jl. Darmo No. 90');
+('Apotek Eterna Care Fatmawati', 'Jakarta Selatan', 'Jl. Fatmawati No. 12A'),
+('Apotek Eterna Care Dago', 'Bandung', 'Jl. Dago No. 47'),
+('Apotek Eterna Care Darmo', 'Surabaya', 'Jl. Darmo No. 90');
 
 INSERT INTO pharmacy_stock (pharmacy_id, medicine_id, stock_qty, price) VALUES
 (1, 1, 120, 12000.00),

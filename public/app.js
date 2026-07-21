@@ -1,12 +1,13 @@
 const API = "api";
 const DAY_NAMES = ["", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
-
-// ---------------------------------------------------------------------------
-// State & helpers
-// ---------------------------------------------------------------------------
-let state = {
-  user: null,
+const MEDICINE_ACTIONS = {
+  VIEW_STOCK: "med-view-stock",
+  BUY: "med-buy"
 };
+
+let state = { user: null };
+let pharmaciesCache = [];
+let medicinesCache = [];
 
 async function api(path, options = {}) {
   const res = await fetch(`${API}/${path}`, {
@@ -50,9 +51,10 @@ function escapeHtml(str) {
   }[c]));
 }
 
-// ---------------------------------------------------------------------------
-// Auth state / UI
-// ---------------------------------------------------------------------------
+function pharmacyBrand(name) {
+  return String(name ?? "").replace(/MediKita/g, "Eterna Care");
+}
+
 function persistUser(user) {
   state.user = user;
   applyAuthUI();
@@ -75,13 +77,9 @@ function applyAuthUI() {
     ? `${state.user.fullName} · ${state.user.role === "admin" ? "admin" : "pasien"}`
     : "";
 
-  // Non-admin patients shouldn't land on the admin tab
   if (!isAdmin && activeTab === "admin") switchTab("beranda");
 }
 
-// ---------------------------------------------------------------------------
-// Tabs
-// ---------------------------------------------------------------------------
 let activeTab = "beranda";
 let activeApotekSub = "katalog";
 
@@ -93,7 +91,7 @@ function switchTab(tab) {
   if (tab === "dokter" && !doctorsLoaded) loadDoctors();
   if (tab === "apotek" && !medicinesLoaded) { loadCategories(); loadMedicines(); }
   if (tab === "apotek" && !pharmaciesLoaded) loadPharmacies();
-  if (tab === "riwayat") { loadBookings(); loadTransactions(); }
+  if (tab === "riwayat") loadTransactions();
   if (tab === "admin") { loadCategories("newCategory"); loadAdminMedicines(); }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -103,6 +101,7 @@ function switchApotekSub(sub) {
   document.querySelectorAll("[data-apotek-sub]").forEach((b) => b.classList.toggle("active", b.dataset.apotekSub === sub));
   document.getElementById("sub-katalog").hidden = sub !== "katalog";
   document.getElementById("sub-apotek-list").hidden = sub !== "apotek-list";
+  if (sub === "apotek-list" && !pharmaciesLoaded) loadPharmacies();
 }
 
 document.getElementById("mainTabs").addEventListener("click", (e) => {
@@ -125,13 +124,17 @@ document.querySelectorAll("[data-apotek-sub]").forEach((btn) => {
   btn.addEventListener("click", () => switchApotekSub(btn.dataset.apotekSub));
 });
 
-// ---------------------------------------------------------------------------
-// Auth modal
-// ---------------------------------------------------------------------------
+// ---- Auth ----
 const authModal = document.getElementById("authModal");
-document.getElementById("btnOpenAuth").addEventListener("click", () => (authModal.hidden = false));
-document.getElementById("closeAuth").addEventListener("click", () => (authModal.hidden = true));
-authModal.addEventListener("click", (e) => { if (e.target === authModal) authModal.hidden = true; });
+document.getElementById("btnOpenAuth").addEventListener("click", () => {
+  authModal.hidden = false;
+});
+document.getElementById("closeAuth").addEventListener("click", () => {
+  authModal.hidden = true;
+});
+authModal.addEventListener("click", (e) => {
+  if (e.target === authModal) authModal.hidden = true;
+});
 
 document.querySelectorAll(".modal-tab").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -201,9 +204,7 @@ function requireLogin() {
   return true;
 }
 
-// ---------------------------------------------------------------------------
-// Dokter
-// ---------------------------------------------------------------------------
+// ---- Dokter ----
 let doctorsLoaded = false;
 
 async function loadDoctors() {
@@ -226,7 +227,6 @@ async function loadDoctors() {
       btn.addEventListener("click", () => openBookingModal(JSON.parse(btn.dataset.book)))
     );
   } catch (err) {
-    // Fallback: tampilkan data seed (database/seed.sql) bila API tak tersedia
     const fallback = seedDoctors({ search, specialization, city });
     if (fallback.length > 0) {
       doctorsLoaded = true;
@@ -260,7 +260,7 @@ function doctorCard(d) {
         <span class="mono-pill">${clinics.length} klinik</span>
       </div>
       <div class="chip-row">
-        ${clinics.map((c) => `<span class="chip">${escapeHtml(c.name)} Â· ${escapeHtml(c.city)}</span>`).join("")}
+         ${clinics.map((c) => `<span class="chip">${escapeHtml(c.name)} · ${escapeHtml(c.city)}</span>`).join("")}
       </div>
       <div class="card-actions">
         <button class="btn primary small" data-book-doctor
@@ -305,7 +305,6 @@ async function openBookingModal(doctor) {
       .join("");
     updateBookingDateHint();
   } catch (err) {
-    // Fallback: jadwal dari seed bila API tak tersedia
     currentSchedules = seedSchedules(doctor.id);
     if (currentSchedules.length > 0) {
       select.innerHTML = currentSchedules
@@ -363,10 +362,9 @@ document.getElementById("bookingForm").addEventListener("submit", async (e) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Apotek / Obat
-// ---------------------------------------------------------------------------
+// ---- Apotek / Obat ----
 let medicinesLoaded = false;
+let pharmaciesLoaded = false;
 
 async function loadCategories(targetId = "medCategory") {
   try {
@@ -399,24 +397,43 @@ async function loadMedicines() {
   try {
     const meds = await api(`medicines.php?${params}`);
     medicinesLoaded = true;
+    medicinesCache = meds;
     if (meds.length === 0) {
       container.innerHTML = `<div class="empty-state">Tidak ada obat yang cocok dengan filter ini.</div>`;
       return;
     }
     container.innerHTML = meds.map(medicineCard).join("");
-    container.querySelectorAll("[data-buy-med]").forEach((btn) =>
-      btn.addEventListener("click", () => openCartModal(JSON.parse(btn.dataset.buy)))
-    );
-    container.querySelectorAll("[data-view-stock]").forEach((btn) =>
-      btn.addEventListener("click", () => openMedStockModal(JSON.parse(btn.dataset.viewStock)))
-    );
+    bindMedicineActions(container);
   } catch (err) {
     container.innerHTML = `<div class="empty-state">${escapeHtml(err.message)}</div>`;
   }
 }
 
+function bindMedicineActions(container) {
+  container.querySelectorAll("[data-medicine-action=\"view-stock\"]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = Number(btn.dataset.medicineId);
+      const med = medicinesCache.find((m) => m.id === id);
+      if (med) openMedStockModal({ id: med.id, name: med.name, category: med.category });
+    });
+  });
+
+  container.querySelectorAll("[data-medicine-action=\"buy\"]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = Number(btn.dataset.medicineId);
+      const med = medicinesCache.find((m) => m.id === id);
+      if (med) openCartModal({ id: med.id, name: med.name, category: med.category });
+    });
+  });
+}
+
 function medicineCard(m) {
   const inStock = Number(m.total_stock) > 0;
+  const medId = Number(m.id);
   return `
     <div class="card">
       <div class="card-top">
@@ -432,12 +449,10 @@ function medicineCard(m) {
         <span class="stock-note">${inStock ? `${m.total_stock} unit total` : "tidak tersedia"}</span>
       </div>
       <div class="card-actions">
-        <button class="btn outline small" data-view-stock
-          data-view-stock='${escapeHtml(JSON.stringify({ id: m.id, name: m.name, category: m.category })).replace(/'/g, "&#39;")}'>
+        <button type="button" class="btn outline small" data-medicine-action="view-stock" data-medicine-id="${medId}">
           Lihat apotek
         </button>
-        <button class="btn primary small" ${inStock ? "" : "disabled"} data-buy-med
-          data-buy='${escapeHtml(JSON.stringify({ id: m.id, name: m.name, category: m.category })).replace(/'/g, "&#39;")}'>
+        <button type="button" class="btn primary small" ${inStock ? "" : "disabled"} data-medicine-action="buy" data-medicine-id="${medId}">
           Beli
         </button>
       </div>
@@ -451,8 +466,6 @@ document.getElementById("btnSearchMeds").addEventListener("click", loadMedicines
 document.getElementById("medCategory").addEventListener("change", loadMedicines);
 
 // ---- Pharmacy listing & catalog ----
-let pharmaciesLoaded = false;
-
 async function loadPharmacies() {
   const search = document.getElementById("pharmSearch").value.trim();
   const city = document.getElementById("pharmCity").value.trim();
@@ -463,14 +476,19 @@ async function loadPharmacies() {
   try {
     const pharmacies = await api(`pharmacies.php?${params}`);
     pharmaciesLoaded = true;
+    pharmaciesCache = pharmacies;
     if (pharmacies.length === 0) {
       container.innerHTML = `<div class="empty-state">Tidak ada apotek yang cocok.</div>`;
       return;
     }
-    container.innerHTML = pharmacies.map(pharmacyCard).join("");
-    container.querySelectorAll("[data-open-catalog]").forEach((btn) =>
-      btn.addEventListener("click", () => openPharmacyCatalog(JSON.parse(btn.dataset.openCatalog)))
-    );
+    container.innerHTML = pharmacies.map((p) => pharmacyCard(p)).join("");
+    container.querySelectorAll("[data-pharmacy-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = Number(btn.dataset.pharmacyId);
+        const pharmacy = pharmaciesCache.find((p) => p.id === id);
+        if (pharmacy) openPharmacyCatalog(pharmacy);
+      });
+    });
   } catch (err) {
     container.innerHTML = `<div class="empty-state">${escapeHtml(err.message)}</div>`;
   }
@@ -479,16 +497,16 @@ async function loadPharmacies() {
 function pharmacyCard(p) {
   return `
     <div class="card">
+      ${p.image_url ? `<img class="pharm-img" src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy" />` : ""}
       <div class="card-top">
         <div>
-          <p class="card-title">${escapeHtml(p.name)}</p>
+          <p class="card-title">${escapeHtml(pharmacyBrand(p.name))}</p>
           <p class="card-sub">${escapeHtml(p.city)}${p.address ? " · " + escapeHtml(p.address) : ""}</p>
         </div>
         <span class="mono-pill">Apotek</span>
       </div>
       <div class="card-actions">
-        <button class="btn primary small" data-open-catalog
-          data-open-catalog='${escapeHtml(JSON.stringify({ id: p.id, name: p.name, city: p.city, address: p.address })).replace(/'/g, "&#39;")}'>
+        <button type="button" class="btn primary small" data-pharmacy-id="${p.id}">
           Lihat katalog obat
         </button>
       </div>
@@ -506,8 +524,17 @@ let currentPharmacy = null;
 
 async function openPharmacyCatalog(pharmacy) {
   currentPharmacy = pharmacy;
-  document.getElementById("catalogPharmacyName").textContent = pharmacy.name;
+  document.getElementById("catalogPharmacyName").textContent = pharmacyBrand(pharmacy.name);
   document.getElementById("catalogPharmacyMeta").textContent = `${pharmacy.city}${pharmacy.address ? " · " + pharmacy.address : ""}`;
+
+  const imgEl = document.getElementById("catalogPharmacyImage");
+  if (pharmacy.image_url) {
+    imgEl.src = pharmacy.image_url;
+    imgEl.hidden = false;
+  } else {
+    imgEl.hidden = true;
+  }
+
   const list = document.getElementById("catalogMedicineList");
   list.innerHTML = `<div class="empty-state">Memuat katalog…</div>`;
   pharmacyCatalogModal.hidden = false;
@@ -537,7 +564,7 @@ async function openPharmacyCatalog(pharmacy) {
 document.getElementById("closePharmacyCatalog").addEventListener("click", () => (pharmacyCatalogModal.hidden = true));
 pharmacyCatalogModal.addEventListener("click", (e) => { if (e.target === pharmacyCatalogModal) pharmacyCatalogModal.hidden = true; });
 
-// ---- Medicine stock availability modal (read-only) ----
+// ---- Medicine stock modal ----
 const medStockModal = document.getElementById("medStockModal");
 let currentMedStock = null;
 
@@ -550,31 +577,89 @@ async function openMedStockModal(med) {
   medStockModal.hidden = false;
 
   try {
-    const stock = await api(`medicines.php?id=${med.id}&action=stock`);
+    const [stock, prescriptions] = await Promise.all([
+      api(`medicines.php?id=${med.id}&action=stock`),
+      api(`medicines.php?id=${med.id}&action=prescriptions`).catch(() => []),
+    ]);
+
+    let hospitalsHtml = "";
+    if (prescriptions.length > 0) {
+      const cities = [...new Set(prescriptions.map((p) => p.clinic_city))];
+      hospitalsHtml = `
+        <div style="margin-bottom: 1rem; padding: 0.9rem; background: rgba(30,111,92,0.06); border: 1px dashed var(--line-strong); border-radius: var(--radius-sm);">
+          <p style="margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 1rem; color: var(--pine-deep);">Rumah sakit / klinik yang meresepkan obat ini</p>
+          ${prescriptions.map((p) => `
+            <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 0.88rem; margin-top: 0.35rem;">
+              <span><strong>${escapeHtml(p.clinic_name)}</strong></span>
+              <span class="mono-pill">${escapeHtml(p.clinic_city)}</span>
+            </div>
+          `).join("")}
+          ${cities.length > 0 ? `<p style="margin: 0.6rem 0 0; font-size: 0.82rem; color: var(--ink-soft);">Menampilkan apotek di kota: ${escapeHtml(cities.join(", "))}</p>` : ""}
+        </div>
+      `;
+    }
+
+    const hasPrescriptions = prescriptions.length > 0;
+
     if (stock.length === 0) {
-      list.innerHTML = `<div class="empty-state">Stok sedang habis di semua apotek.</div>`;
+      list.innerHTML = hospitalsHtml ? hospitalsHtml + `<div class="empty-state">Stok sedang habis di semua apotek.</div>` : `<div class="empty-state">Stok sedang habis di semua apotek.</div>`;
       return;
     }
-    list.innerHTML = stock.map((s) => `
-      <div class="list-item">
-        <div class="list-item-top">
-          <div>
-            <p class="list-item-title">${escapeHtml(s.pharmacy_name)}</p>
-            <p class="list-item-meta">${escapeHtml(s.city)} · stok ${s.stock_qty}</p>
-          </div>
-          <span class="price">${formatRupiah(s.price)}</span>
-        </div>
-      </div>
-    `).join("");
+
+    const filteredStock = hasPrescriptions
+      ? stock.filter((s) => prescriptions.some((p) => p.clinic_city === s.city))
+      : stock;
+
+    list.innerHTML = hospitalsHtml + (filteredStock.length > 0
+      ? filteredStock.map((s) => {
+          const displayStock = hasPrescriptions ? 0 : s.stock_qty;
+          return `
+            <div class="list-item clickable" data-pharmacy-idx="${s.pharmacy_id}">
+              ${s.image_url ? `<img class="pharm-thumb" src="${escapeHtml(s.image_url)}" alt="${escapeHtml(pharmacyBrand(s.pharmacy_name))}" loading="lazy" />` : ""}
+              <div class="list-item-top">
+                <div>
+                  <p class="list-item-title">${escapeHtml(pharmacyBrand(s.pharmacy_name))}</p>
+                  <p class="list-item-meta">${escapeHtml(s.city)} · stok ${displayStock}</p>
+                </div>
+                <span class="price">${formatRupiah(s.price)}</span>
+              </div>
+            </div>`;
+        }).join("")
+      : `<div class="empty-state">Tidak ada apotek di kota yang sesuai dengan rumah sakit penyebut obat ini.</div>`);
+
+    list.querySelectorAll("[data-pharmacy-idx]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        const pharmacyId = Number(el.dataset.pharmacyIdx);
+        const selected = filteredStock.find((s) => s.pharmacy_id === pharmacyId) || stock.find((s) => s.pharmacy_id === pharmacyId);
+        if (selected) openCartModalFromStock(selected, med);
+      });
+    });
   } catch (err) {
     list.innerHTML = `<div class="empty-state">${escapeHtml(err.message)}</div>`;
   }
 }
 
+function openCartModalFromStock(stockItem, med) {
+  if (!requireLogin()) return;
+  selectedPharmacyStock = stockItem;
+  currentMedicine = { id: med.id, name: med.name, category: med.category };
+
+  document.getElementById("cartMedName").textContent = med.name;
+  document.getElementById("cartMedMeta").textContent = med.category || "";
+  document.getElementById("cartSelectedPharmacy").textContent =
+    `${pharmacyBrand(selectedPharmacyStock.pharmacy_name)} — ${formatRupiah(selectedPharmacyStock.price)}/unit`;
+  document.getElementById("cartQty").max = selectedPharmacyStock.stock_qty;
+  document.getElementById("cartQty").value = 1;
+  document.getElementById("cartError").textContent = "";
+  document.getElementById("cartForm").hidden = false;
+  cartModal.hidden = false;
+}
+
 document.getElementById("closeMedStock").addEventListener("click", () => (medStockModal.hidden = true));
 medStockModal.addEventListener("click", (e) => { if (e.target === medStockModal) medStockModal.hidden = true; });
 
-// ---- Cart / purchase modal ----
+// ---- Cart modal ----
 const cartModal = document.getElementById("cartModal");
 let currentMedicine = null;
 let selectedPharmacyStock = null;
@@ -592,34 +677,69 @@ async function openCartModal(med) {
   cartModal.hidden = false;
 
   try {
-    const stock = await api(`medicines.php?id=${med.id}&action=stock`);
+    const [stock, prescriptions] = await Promise.all([
+      api(`medicines.php?id=${med.id}&action=stock`),
+      api(`medicines.php?id=${med.id}&action=prescriptions`).catch(() => []),
+    ]);
+
+    let hospitalsHtml = "";
+    if (prescriptions.length > 0) {
+      const cities = [...new Set(prescriptions.map((p) => p.clinic_city))];
+      hospitalsHtml = `
+        <div style="margin-bottom: 1rem; padding: 0.9rem; background: rgba(30,111,92,0.06); border: 1px dashed var(--line-strong); border-radius: var(--radius-sm);">
+          <p style="margin: 0 0 0.5rem; font-family: var(--font-display); font-size: 1rem; color: var(--pine-deep);">Rumah sakit / klinik yang meresepkan obat ini</p>
+          ${prescriptions.map((p) => `
+            <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 0.88rem; margin-top: 0.35rem;">
+              <span><strong>${escapeHtml(p.clinic_name)}</strong></span>
+              <span class="mono-pill">${escapeHtml(p.clinic_city)}</span>
+            </div>
+          `).join("")}
+          ${cities.length > 0 ? `<p style="margin: 0.6rem 0 0; font-size: 0.82rem; color: var(--ink-soft);">Menampilkan apotek di kota: ${escapeHtml(cities.join(", "))}</p>` : ""}
+        </div>
+      `;
+    }
+
+    const hasPrescriptions = prescriptions.length > 0;
+
     if (stock.length === 0) {
-      list.innerHTML = `<div class="empty-state">Stok sedang habis di semua apotek.</div>`;
+      list.innerHTML = hospitalsHtml ? hospitalsHtml + `<div class="empty-state">Stok sedang habis di semua apotek.</div>` : `<div class="empty-state">Stok sedang habis di semua apotek.</div>`;
       return;
     }
-    list.innerHTML = stock
-      .map(
-        (s, i) => `
-      <div class="list-item" style="cursor:pointer" data-pharmacy-idx="${i}">
-        <div class="list-item-top">
-          <div>
-            <p class="list-item-title">${escapeHtml(s.pharmacy_name)}</p>
-            <p class="list-item-meta">${escapeHtml(s.city)} · stok ${s.stock_qty}</p>
-          </div>
-          <span class="price">${formatRupiah(s.price)}</span>
-        </div>
-      </div>`
-      )
-      .join("");
-    list.querySelectorAll("[data-pharmacy-idx]").forEach((el) =>
-      el.addEventListener("click", () => {
-        selectedPharmacyStock = stock[Number(el.dataset.pharmacyIdx)];
+
+    const filteredStock = hasPrescriptions
+      ? stock.filter((s) => prescriptions.some((p) => p.clinic_city === s.city))
+      : stock;
+
+    list.innerHTML = hospitalsHtml + (filteredStock.length > 0
+      ? filteredStock.map((s, i) => {
+          const displayStock = hasPrescriptions ? 0 : s.stock_qty;
+          return `
+            <div class="list-item clickable" data-pharmacy-idx="${i}">
+              ${s.image_url ? `<img class="pharm-thumb" src="${escapeHtml(s.image_url)}" alt="${escapeHtml(pharmacyBrand(s.pharmacy_name))}" loading="lazy" />` : ""}
+              <div class="list-item-top">
+                <div>
+                  <p class="list-item-title">${escapeHtml(pharmacyBrand(s.pharmacy_name))}</p>
+                  <p class="list-item-meta">${escapeHtml(s.city)} · stok ${displayStock}</p>
+                </div>
+                <span class="price">${formatRupiah(s.price)}</span>
+              </div>
+            </div>`;
+        }).join("")
+      : `<div class="empty-state">Tidak ada apotek di kota yang sesuai dengan rumah sakit penyebut obat ini.</div>`);
+
+    list.querySelectorAll("[data-pharmacy-idx]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        const idx = Number(el.dataset.pharmacyIdx);
+        selectedPharmacyStock = filteredStock[idx] || stock[idx];
+        if (!selectedPharmacyStock) return;
         document.getElementById("cartSelectedPharmacy").textContent =
-          `${selectedPharmacyStock.pharmacy_name} — ${formatRupiah(selectedPharmacyStock.price)}/unit`;
+          `${pharmacyBrand(selectedPharmacyStock.pharmacy_name)} — ${formatRupiah(selectedPharmacyStock.price)}/unit`;
         document.getElementById("cartQty").max = selectedPharmacyStock.stock_qty;
+        document.getElementById("cartQty").value = 1;
         document.getElementById("cartForm").hidden = false;
-      })
-    );
+      });
+    });
   } catch (err) {
     list.innerHTML = `<div class="empty-state">${escapeHtml(err.message)}</div>`;
   }
@@ -633,6 +753,10 @@ document.getElementById("cartForm").addEventListener("submit", async (e) => {
   const errorEl = document.getElementById("cartError");
   errorEl.textContent = "";
   const qty = Number(document.getElementById("cartQty").value);
+  if (!selectedPharmacyStock) {
+    errorEl.textContent = "Pilih apotek terlebih dahulu.";
+    return;
+  }
 
   try {
     const result = await api("transactions.php", {
@@ -652,9 +776,7 @@ document.getElementById("cartForm").addEventListener("submit", async (e) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Riwayat
-// ---------------------------------------------------------------------------
+// ---- Riwayat ----
 async function loadBookings() {
   if (!state.user) return;
   const container = document.getElementById("bookingList");
@@ -722,7 +844,7 @@ function transactionItem(t) {
     <div class="list-item">
       <div class="list-item-top">
         <div>
-          <p class="list-item-title">${escapeHtml(t.pharmacy_name)}</p>
+          <p class="list-item-title">${escapeHtml(pharmacyBrand(t.pharmacy_name))}</p>
           <p class="list-item-meta">${escapeHtml(t.pharmacy_city)} · ${formatDate(t.created_at)}</p>
         </div>
         <span class="price">${formatRupiah(t.total_price)}</span>
@@ -735,9 +857,7 @@ function transactionItem(t) {
     </div>`;
 }
 
-// ---------------------------------------------------------------------------
-// Admin — kelola obat
-// ---------------------------------------------------------------------------
+// ---- Admin ----
 async function loadAdminMedicines() {
   const container = document.getElementById("adminMedicineList");
   container.innerHTML = `<div class="empty-state">Memuat…</div>`;
@@ -757,7 +877,6 @@ async function loadAdminMedicines() {
 }
 
 function adminMedicineItem(m) {
-  const category = m.category ?? (m.category_id ? null : null);
   const catLabel = m.category || "Tanpa kategori";
   return `
     <div class="list-item">
@@ -804,9 +923,35 @@ document.getElementById("addMedicineForm").addEventListener("submit", async (e) 
   }
 });
 
-// ---------------------------------------------------------------------------
-// Boot
-// ---------------------------------------------------------------------------
+function seedDoctors({ search = "", specialization = "", city = "" }) {
+  const fallback = [
+    { id: 1, full_name: "dr. Ayu Lestari, Sp.PD", specialization: "Penyakit Dalam", clinics: [{ name: "Klinik Sehat Sentosa", city: "Jakarta Selatan" }] },
+    { id: 2, full_name: "dr. Rangga Pratama, Sp.A", specialization: "Anak", clinics: [{ name: "Klinik Harapan Bunda", city: "Bandung" }] },
+    { id: 3, full_name: "dr. Maria Christin, Sp.KK", specialization: "Kulit & Kelamin", clinics: [{ name: "Klinik Dermacare", city: "Surabaya" }] },
+    { id: 4, full_name: "dr. Fajar Nugroho", specialization: "Dokter Umum", clinics: [{ name: "Klinik Pratama", city: "Jakarta Selatan" }] },
+    { id: 5, full_name: "dr. Intan Permatasari, Sp.THT", specialization: "THT", clinics: [{ name: "Klinik Makara", city: "Bandung" }] },
+  ];
+  const q = `${search} ${specialization} ${city}`.toLowerCase();
+  return fallback.filter((d) =>
+    !q ||
+    d.full_name.toLowerCase().includes(q) ||
+    d.specialization.toLowerCase().includes(q) ||
+    d.clinics.some((c) => c.city.toLowerCase().includes(q))
+  );
+}
+
+function seedSchedules(doctorId) {
+  const schedules = {
+    1: [{ id: 101, day_of_week: 1, start_time: "08:00", end_time: "12:00", clinic_name: "Klinik Sehat Sentosa", clinic_city: "Jakarta Selatan" }],
+    2: [{ id: 201, day_of_week: 2, start_time: "09:00", end_time: "11:00", clinic_name: "Klinik Harapan Bunda", clinic_city: "Bandung" }],
+    3: [{ id: 301, day_of_week: 3, start_time: "13:00", end_time: "16:00", clinic_name: "Klinik Dermacare", clinic_city: "Surabaya" }],
+    4: [{ id: 401, day_of_week: 4, start_time: "08:00", end_time: "10:00", clinic_name: "Klinik Pratama", clinic_city: "Jakarta Selatan" }],
+    5: [{ id: 501, day_of_week: 5, start_time: "10:00", end_time: "12:00", clinic_name: "Klinik Makara", clinic_city: "Bandung" }],
+  };
+  return schedules[doctorId] || [];
+}
+
+// ---- Boot ----
 (async function boot() {
   try {
     const { user } = await api("auth.php?action=me");

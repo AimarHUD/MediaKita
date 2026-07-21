@@ -215,19 +215,20 @@ CREATE TABLE medicines (
 
 
  CREATE TABLE pharmacies (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    city_id BIGINT NOT NULL,
-    pharmacy_name VARCHAR(150) NOT NULL,
-    address TEXT NOT NULL,
-    phone VARCHAR(20),
-    email VARCHAR(100),
-    opening_hours VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+     city_id BIGINT NOT NULL,
+     pharmacy_name VARCHAR(150) NOT NULL,
+     address TEXT NOT NULL,
+     phone VARCHAR(20),
+     email VARCHAR(100),
+     opening_hours VARCHAR(100),
+     image_url VARCHAR(255),
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (city_id)
-    REFERENCES cities(id)
-    ON DELETE CASCADE
-) ENGINE=InnoDB; 
+     FOREIGN KEY (city_id)
+     REFERENCES cities(id)
+     ON DELETE CASCADE
+ ) ENGINE=InnoDB;
 
 
  CREATE TABLE pharmacy_stock (

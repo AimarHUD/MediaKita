@@ -1,12 +1,12 @@
-# MediKita — Workshop Database Design
+# Eterna Care — Workshop Database Design
 
-Implementasi lengkap tugas take-home MediKita: ERD Crow's Foot, skema
+Implementasi lengkap tugas take-home Eterna Care: ERD Crow's Foot, skema
 PostgreSQL yang sudah dinormalisasi, REST API (Node.js + Express), dan
 antarmuka web (vanilla HTML/CSS/JS) untuk booking dokter serta pembelian
 obat lintas apotek.
 
 ```
-medikita/
+eternacare/
 ├── database/
 │   ├── schema.sql        ← DDL PostgreSQL (tabel, FK, constraint, index)
 │   ├── seed.sql           ← contoh data (referensi manual)
@@ -39,7 +39,7 @@ docker compose up -d
 ```
 
 Ini akan menjalankan PostgreSQL di `localhost:5432` dengan database
-`medikita`, user `medikita`, password `medikita` (lihat `docker-compose.yml`).
+`eternacare`, user `eternacare`, password `eternacare` (lihat `docker-compose.yml`).
 
 Tidak pakai Docker? Buat database PostgreSQL/MySQL manual lalu sesuaikan
 `DATABASE_URL` di langkah berikut. (Query di `server/` ditulis untuk
@@ -69,7 +69,7 @@ Akun demo yang dibuat (password semua: `password123`):
 |---|---|
 | siti.amelia@example.com | pasien |
 | budi.santoso@example.com | pasien |
-| admin@medikita.id | admin (bisa kelola katalog obat) |
+| admin@eternacare.id | admin (bisa kelola katalog obat) |
 
 ### 4. Jalankan server
 

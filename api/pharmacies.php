@@ -9,10 +9,11 @@ if ($method === 'GET' && isset($_GET['id']) && ($_GET['action'] ?? '') === 'cata
     $id = (int) $_GET['id'];
     $stmt = db()->prepare(
         'SELECT m.id AS medicine_id, m.sku, m.name, cat.name AS category,
-                ps.stock_qty, ps.price
+                ps.stock_qty, ps.price, p.image_url
          FROM pharmacy_stock ps
          JOIN medicines m ON m.id = ps.medicine_id
          LEFT JOIN medicine_categories cat ON cat.id = m.category_id
+         JOIN pharmacies p ON p.id = ps.pharmacy_id
          WHERE ps.pharmacy_id = ?
          ORDER BY m.name'
     );
@@ -24,7 +25,7 @@ if ($method === 'GET' && isset($_GET['id']) && ($_GET['action'] ?? '') === 'cata
 if ($method === 'GET') {
     $city = trim($_GET['city'] ?? '');
     $params = [];
-    $sql = 'SELECT id, name, city, address FROM pharmacies';
+    $sql = 'SELECT id, name, city, address, image_url FROM pharmacies';
     if ($city !== '') {
         $sql .= ' WHERE city LIKE ?';
         $params[] = '%' . like_escape($city) . '%';

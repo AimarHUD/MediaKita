@@ -41,5 +41,5 @@ app.use((err, _req, res, _next) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`MediKita API berjalan di http://localhost:${PORT}`);
+  console.log(`Eterna Care API berjalan di http://localhost:${PORT}`);
 });

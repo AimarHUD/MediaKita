@@ -115,9 +115,9 @@ async function run() {
 
     const pharmacies = await client.query(
       `INSERT INTO pharmacies (name, city, address) VALUES
-        ('Apotek MediKita Fatmawati', 'Jakarta Selatan', 'Jl. Fatmawati No. 12A'),
-        ('Apotek MediKita Dago', 'Bandung', 'Jl. Dago No. 47'),
-        ('Apotek MediKita Darmo', 'Surabaya', 'Jl. Darmo No. 90')
+        ('Apotek Eterna Care Fatmawati', 'Jakarta Selatan', 'Jl. Fatmawati No. 12A'),
+        ('Apotek Eterna Care Dago', 'Bandung', 'Jl. Dago No. 47'),
+        ('Apotek Eterna Care Darmo', 'Surabaya', 'Jl. Darmo No. 90')
        RETURNING id`
     );
     const [ph1, ph2, ph3] = pharmacies.rows;

@@ -15,11 +15,28 @@ if ($method === 'GET' && ($_GET['action'] ?? '') === 'categories') {
 if ($method === 'GET' && isset($_GET['id']) && ($_GET['action'] ?? '') === 'stock') {
     $id = (int) $_GET['id'];
     $stmt = db()->prepare(
-        'SELECT p.id AS pharmacy_id, p.name AS pharmacy_name, p.city, ps.stock_qty, ps.price
+        'SELECT p.id AS pharmacy_id, p.name AS pharmacy_name, p.city, p.image_url, ps.stock_qty, ps.price
          FROM pharmacy_stock ps
          JOIN pharmacies p ON p.id = ps.pharmacy_id
          WHERE ps.medicine_id = ? AND ps.stock_qty > 0
          ORDER BY ps.price ASC'
+    );
+    $stmt->execute([$id]);
+    send_json($stmt->fetchAll());
+}
+
+// GET /api/medicines/:id/prescriptions — hospitals that prescribed this medicine
+if ($method === 'GET' && isset($_GET['id']) && ($_GET['action'] ?? '') === 'prescriptions') {
+    $id = (int) $_GET['id'];
+    $stmt = db()->prepare(
+        'SELECT DISTINCT c.id AS clinic_id, c.name AS clinic_name, c.city AS clinic_city, c.address AS clinic_address
+         FROM prescriptions pr
+         JOIN medical_records mr ON mr.id = pr.medical_record_id
+         JOIN bookings b ON b.id = mr.booking_id
+         JOIN doctor_schedules ds ON ds.id = b.schedule_id
+         JOIN clinics c ON c.id = ds.clinic_id
+         WHERE pr.medicine_id = ?
+         ORDER BY c.name'
     );
     $stmt->execute([$id]);
     send_json($stmt->fetchAll());
