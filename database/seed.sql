@@ -4,7 +4,7 @@
 
 INSERT INTO users (email, password_hash, role) VALUES
 ('bilqis@gmail.com', '123456', 'patient'),
-('admin@medikita.com', 'admin123', 'admin'),
+('admin@eternacare.com', 'admin123', 'admin'),
 ('dr.andi@gmail.com', 'dokter123', 'doctor'),
 ('dr.sinta@gmail.com', 'dokter456', 'doctor'),
 ('rizky@gmail.com', 'rizky123', 'patient');
@@ -52,11 +52,11 @@ VALUES
 INSERT INTO clinics
 (city_id, name, address, phone, email, opening_hours)
 VALUES
-(1,'Klinik Sehat Jakarta','Jl. Raya Pasar Minggu No.10','021888888','jakarta@medikita.com','08:00-20:00'),
-(2,'Klinik Medika Timur','Jl. Pemuda No.25','021777777','timur@medikita.com','08:00-21:00'),
-(3,'Klinik Bogor Sehat','Jl. Pajajaran No.15','0251838383','bogor@medikita.com','07:00-20:00'),
-(4,'Klinik Depok Care','Jl. Margonda No.45','021565656','depok@medikita.com','08:00-22:00'),
-(5,'Klinik Bekasi Medis','Jl. Ahmad Yani No.8','021989898','bekasi@medikita.com','08:00-20:00');
+(1,'Klinik Sehat Jakarta','Jl. Raya Pasar Minggu No.10','021888888','jakarta@eternacare.com','08:00-20:00'),
+(2,'Klinik Medika Timur','Jl. Pemuda No.25','021777777','timur@eternacare.com','08:00-21:00'),
+(3,'Klinik Bogor Sehat','Jl. Pajajaran No.15','0251838383','bogor@eternacare.com','07:00-20:00'),
+(4,'Klinik Depok Care','Jl. Margonda No.45','021565656','depok@eternacare.com','08:00-22:00'),
+(5,'Klinik Bekasi Medis','Jl. Ahmad Yani No.8','021989898','bekasi@eternacare.com','08:00-20:00');
 
 -- ==========================================
 -- DOCTORS
@@ -115,7 +115,7 @@ VALUES
 (2,2,2,'Flu','Vitamin C 2x1','Minum air hangat','2026-07-22'),
 (1,2,3,'Kontrol Rutin','Vitamin B Complex','Kondisi membaik','2026-07-24');
 
-[14:36, 20/07/2026] Daffa (Sistem informasi BSI): -- ==========================================
+-- ==========================================
 -- MEDICINE_CATEGORIES
 -- ==========================================
 
@@ -142,19 +142,6 @@ VALUES
 (1,'OB005','Amoxicillin','Antibiotik','Dexa Medica','2028-06-01');
 
 -- ==========================================
--- MEDICINE_IMAGES
--- ==========================================
-
-INSERT INTO medicine_images
-(medicine_id, image)
-VALUES
-(1,'paracetamol.jpg'),
-(2,'vitaminc.jpg'),
-(3,'ibuprofen.jpg'),
-(4,'obh.jpg'),
-(5,'amoxicillin.jpg');
-
--- ==========================================
 -- PHARMACIES
 -- ==========================================
 
@@ -178,7 +165,8 @@ VALUES
 (2,1,120,12500),
 (2,4,75,17000),
 (3,5,60,22000);
-[14:36, 20/07/2026] Daffa (Sistem informasi BSI): -- ==========================================
+
+-- ==========================================
 -- PRESCRIPTIONS
 -- ==========================================
 

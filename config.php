@@ -5,7 +5,7 @@ session_start();
 // --- Database configuration (XAMPP MySQL defaults) ---
 define('DB_HOST', '127.0.0.1');
 define('DB_PORT', 3306);
-define('DB_NAME', 'medikita');
+define('DB_NAME', 'eterna_care');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 
